@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Churnlight — who to save this week</title>
+<meta name="description" content="Free, open-source churn early-warning for small customer success teams. Drop in your exports, get who to save this week — with the reason and what to do.">
+<link rel="canonical" href="https://churnlight.vercel.app/">
+<style>
+  :root { --ink:#111; --muted:#6b7280; --line:#e5e7eb; --accent:#2563eb; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; color:var(--ink); margin:0; }
+  .wrap { max-width:720px; margin:0 auto; padding:0 24px; }
+  header { padding:28px 0; }
+  header .wrap { display:flex; justify-content:space-between; align-items:center; }
+  .logo { font-weight:700; font-size:18px; letter-spacing:-0.3px; }
+  nav a { color:var(--muted); text-decoration:none; font-size:14px; margin-left:22px; }
+  nav a:hover { color:var(--ink); }
+  .hero { padding:72px 0 56px; }
+  h1 { font-size:44px; line-height:1.08; letter-spacing:-1.5px; margin:0 0 16px; }
+  .sub { font-size:18px; color:var(--muted); line-height:1.5; margin:0 0 32px; max-width:560px; }
+  .cta-row { display:flex; gap:12px; flex-wrap:wrap; }
+  .btn { display:inline-block; padding:13px 24px; border-radius:10px; font-size:15px; font-weight:600; text-decoration:none; }
+  .btn-dark { background:var(--ink); color:#fff; }
+  .btn-ghost { border:1px solid var(--line); color:var(--ink); background:#fff; }
+  section { border-top:1px solid var(--line); padding:56px 0; }
+  h2 { font-size:24px; letter-spacing:-0.5px; margin:0 0 20px; }
+  .step { display:flex; gap:16px; margin-bottom:22px; }
+  .step b { color:var(--accent); font-size:15px; min-width:26px; }
+  .step p { margin:0; font-size:15px; line-height:1.55; }
+  .step p span { color:var(--muted); }
+  .free-pro { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:640px) { .free-pro { grid-template-columns:1fr; } h1 { font-size:34px; } }
+  .tier { border:1px solid var(--line); border-radius:12px; padding:22px; }
+  .tier.pro { border-color:var(--ink); }
+  .tier h3 { margin:0; font-size:16px; display:flex; justify-content:space-between; }
+  .tier .price { font-weight:700; }
+  .tier ul { margin:14px 0 0; padding:0 0 0 2px; list-style:none; font-size:14px; line-height:1.6; color:var(--muted); }
+  .tier ul b { color:var(--ink); font-weight:600; }
+  .why { font-size:15px; line-height:1.65; color:var(--muted); max-width:600px; }
+  .why b { color:var(--ink); }
+  code { background:#f4f4f5; padding:2px 6px; border-radius:5px; font-size:13px; }
+  footer { border-top:1px solid var(--line); padding:28px 0 48px; color:var(--muted); font-size:13px; }
+  footer .wrap { display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="logo">Churnlight</div>
+    <nav>
+      <a href="https://github.com/Yayihie/churnlight">GitHub</a>
+      <a href="#pricing">Pricing</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Who to save this week.</h1>
+    <p class="sub">Churnlight reads the exports you already have and tells you which customers are slipping — with the reason in plain words and what to do next. Free and open source.</p>
+    <div class="cta-row">
+      <a class="btn btn-dark" href="https://github.com/Yayihie/churnlight">Get it free on GitHub</a>
+      <a class="btn btn-ghost" href="#pricing">Pro — $49/mo</a>
+    </div>
+  </div>
+
+  <section>
+    <h2>How it works</h2>
+    <div class="step"><b>01</b><p>Drag in your CSVs. <span>Stripe export, support tickets, product usage, meetings. Whatever you have — missing files are fine.</span></p></div>
+    <div class="step"><b>02</b><p>Six transparent rules score every account. <span>Champion left. Renewal coming with no contact. Usage down. Stale tickets. Failed payments. Cancelled meetings.</span></p></div>
+    <div class="step"><b>03</b><p>Monday morning, you get the list. <span>Each account: why it's at risk, what to do, and the MRR on the line. Attach it to email or paste it into Slack.</span></p></div>
+  </section>
+
+  <section>
+    <h2>Why not Gainsight?</h2>
+    <p class="why">Because you're a team of two, not a team of twenty. Enterprise CS platforms want a <b>dedicated admin</b>, a <b>migration project</b>, and a <b>five-figure invoice</b> — then your CSMs do data entry twice. Churnlight has no admin, no dashboards to worship, and no black-box health score that says a customer is "green" the week they cancel. Every signal is a rule you can read and a slider you can move.</p>
+  </section>
+
+  <section id="pricing">
+    <h2>Pricing</h2>
+    <div class="free-pro">
+      <div class="tier">
+        <h3>Free <span class="price">$0</span></h3>
+        <ul>
+          <li><b>Everything above</b> — forever, MIT licensed</li>
+          <li>Runs on your machine, your data stays local</li>
+          <li>Manual digests whenever you want them</li>
+        </ul>
+      </div>
+      <div class="tier pro">
+        <h3>Pro <span class="price">$49/mo</span></h3>
+        <ul>
+          <li><b>Stripe auto-connect</b> — no CSV exports, ever</li>
+          <li><b>Monday email on autopilot</b> — 8:00 AM, no clicking</li>
+          <li><b>Hosted for you</b> — nothing to install or keep running</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:18px;font-size:14px;color:var(--muted)">The free version is the whole product, minus the automation. Pro is for teams that don't want to think about it.</p>
+  </section>
+
+  <section>
+    <h2>Run it in 60 seconds</h2>
+    <p class="why"><code>git clone https://github.com/Yayihie/churnlight && cd churnlight && npm install && npm start</code><br><br>Opens at <code>localhost:8788</code>. Drag your exports in. That's the whole setup.</p>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Churnlight — open source under the MIT License</span>
+    <span><a href="https://github.com/Yayihie/churnlight" style="color:inherit">github.com/Yayihie/churnlight</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
