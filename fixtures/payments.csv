@@ -1,0 +1,7 @@
+account_id,date,status,amount_cents
+acme,2026-11-05,succeeded,240000
+bright,2026-11-10,failed,90000
+bright,2026-11-20,failed,90000
+cedar,2026-11-12,succeeded,18000
+delta,2026-11-13,succeeded,520000
+echo,2026-11-14,succeeded,310000

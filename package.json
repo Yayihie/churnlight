@@ -1,0 +1,19 @@
+{
+  "name": "churnlight",
+  "version": "0.1.0",
+  "description": "Rules-based weekly churn risk list for small customer success teams. No admin, no dashboard worship — just who to save and why.",
+  "type": "module",
+  "bin": { "churnlight": "dist/cli.js" },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "cli": "npm run build && node dist/cli.js",
+    "start": "npm run build && node dist/server.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  },
+  "license": "MIT"
+}

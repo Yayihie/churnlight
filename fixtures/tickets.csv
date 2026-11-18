@@ -1,0 +1,4 @@
+account_id,date,subject,status,age_days
+acme,2026-11-20,API export broken,resolved,3
+delta,2026-10-25,Sync stalls at 60%,open,31
+bright,2026-11-22,SSO question,open,3
