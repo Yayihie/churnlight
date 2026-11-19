@@ -14,7 +14,14 @@ import { pullStripe, paymentsToCsv, sendEmail, startScheduler } from "./pro.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8788);
 
-const num = (v: string | undefined, d = 0) => (v === undefined || v === "" || isNaN(Number(v)) ? d : Number(v));
+// Real exports format numbers ("$2,400", "2,400.50", " 100 ") — strip
+// currency symbols, commas and whitespace before Number().
+const num = (v: string | undefined, d = 0) => {
+  if (v === undefined) return d;
+  const cleaned = v.replace(/[$,\s]/g, "");
+  if (cleaned === "" || isNaN(Number(cleaned))) return d;
+  return Number(cleaned);
+};
 
 // Shared JSON-body reader for the pro endpoints.
 function readJson(req: http.IncomingMessage, res: http.ServerResponse, handler: (body: any) => Promise<void>) {
@@ -37,12 +44,20 @@ interface WebPayload {
 }
 
 // CSV rows are keyed by snake_case headers; map to typed objects.
+// Duplicate account ids (re-exported sheets, merged files) collapse to the
+// LAST row — otherwise the same account shows up as multiple risk cards
+// with doubled scores.
 function loadAccounts(rows: Record<string, string>[]): Account[] {
-  return rows.map((r) => ({
-    id: r.id || r.account_id || r.account || "", name: r.name || r.id || r.account_id || "(unnamed)",
-    mrr: num(r.mrr), renewalOn: r.renewal_on || r.renewal_date || "9999-12-31",
-    lastContactOn: r.last_contact_on || r.last_contact || "1970-01-01",
-  }));
+  const byId = new Map<string, Account>();
+  for (const r of rows) {
+    const a: Account = {
+      id: r.id || r.account_id || r.account || "", name: r.name || r.id || r.account_id || "(unnamed)",
+      mrr: num(r.mrr), renewalOn: r.renewal_on || r.renewal_date || "9999-12-31",
+      lastContactOn: r.last_contact_on || r.last_contact || "1970-01-01",
+    };
+    if (a.id) byId.set(a.id, a);
+  }
+  return [...byId.values()];
 }
 
 function analyze(payload: WebPayload) {
