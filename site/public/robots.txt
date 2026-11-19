@@ -1,2 +1,7 @@
+# Churnlight — open to crawlers and AI agents
 User-agent: *
 Allow: /
+
+# Machine-readable guide for agents:
+# https://churnlight.vercel.app/llms.txt
+# Keyless JSON API: POST https://churnlight.vercel.app/api/analyze

@@ -1,0 +1,24 @@
+> Free, open-source churn early-warning for small customer-success teams. MIT, no paid tier, no account. Zero runtime dependencies.
+
+# Churnlight
+
+- [App (no install)](https://churnlight.vercel.app/app): the full scanner runs in the browser; CSV drag-drop or API.
+- [Repo](https://github.com/Yayihie/churnlight): TypeScript, zero deps, 45 vitest tests, MIT. Rules in src/rules.ts are readable and weighted — no black box.
+- [Landing](https://churnlight.vercel.app/): what it does, the 7 rules, what's included.
+
+## API for tools, bots and agents (no key, CORS *)
+
+- `POST https://churnlight.vercel.app/api/analyze`: body `{"files":{"accounts.csv":"<csv text>", "...":"..."},"config":{"renewalSoonDays":30}}` → `{"items","warnings","md","html","config","today"}`. `items` = risk list (account, tier critical|watch, riskScore, signals with reason, math, action). `warnings` = dropped/unparseable rows, never silent. `md` = Markdown/Slack-ready. Nothing persisted.
+- `POST /api/hubspot` `{"token":"pat-..."}` → `{"files":{"accounts.csv":"...","tickets.csv":"..."}}` normalized CSVs.
+- `POST /api/salesforce` `{"username","password","securityToken","clientId","clientSecret"}` → same shape (Accounts + Cases). Credentials never stored.
+- `POST /api/stripe` `{"secretKey":"sk_..."}` → `{"filename":"payments.csv","csv":"...","count":N}`.
+- Errors: non-200 with `{"error":"plain language"}`. GET → 405 with usage hint. CORS: `*`, OPTIONS preflight OK.
+
+## CSV contract
+
+- accounts.csv (required): `id, name, mrr, renewal_on, last_contact_on` (snake_case, common aliases accepted; DD/MM vs MM/DD detected and converted, ambiguity warned).
+- Optional: usage.csv (account_id, date, metric, value), tickets.csv (account_id, date, subject, status, age_days), payments.csv (account_id, date, status, amount_cents), meetings.csv (account_id, date, status), champions.csv (account_id, date, note), users.csv (account_id, name, last_active_on). Missing files are fine.
+
+## Local install
+
+`git clone https://github.com/Yayihie/churnlight && cd churnlight && npm install && npm start` → same app + endpoints on http://localhost:8788, plus the scheduled Monday email. Data never leaves the machine.
