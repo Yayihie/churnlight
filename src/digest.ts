@@ -38,7 +38,7 @@ export function renderEmailHtml(items: RiskItem[], title = "Churnlight — Weekl
     </tr>`
     )
     .join("");
-  return `<!doctype html><html><body style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px;color:#111">
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title></head><body style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px;color:#111">
   <h2 style="margin:0 0 4px">${esc(title)}</h2>
   <p style="color:#666;font-size:14px;margin-top:0">${items.length} account(s) flagged. Every reason comes with a next action — that is the whole point.</p>
   <table style="border-collapse:collapse;width:100%">${rows || '<tr><td style="padding:20px;color:#666">Nothing flagged this week. 🎉</td></tr>'}</table>

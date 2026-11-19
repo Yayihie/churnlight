@@ -175,6 +175,7 @@
   <div class="topbar">
     <div class="brand"><span class="dot"></span>Churnlight</div>
     <nav>
+      <a href="#integrations">Connect tools</a>
       <a href="/">Home</a>
       <a href="https://github.com/Yayihie/churnlight" target="_blank" rel="noopener">GitHub</a>
     </nav>
@@ -215,6 +216,48 @@
   <button class="go" id="go" disabled>Find my at-risk customers</button>
   <div class="err" id="err"></div>
 
+  <div class="pro" id="integrations">
+    <div class="pro-card">
+      <div class="pro-head">
+        <div>
+          <h3>Connect your tools</h3>
+          <p class="pro-sub">Optional — CSV files work too. Everything here is free.</p>
+        </div>
+      </div>
+      <div>
+        <details class="pro-panel">
+          <summary>Connect HubSpot (paste your private app token)</summary>
+          <div class="panel-body">
+            <input type="password" class="txt" id="hs-token" placeholder="pat-na1-... (Settings → Integrations → Private Apps)">
+            <button class="pro-btn" id="hs-go">Pull accounts &amp; tickets now</button>
+            <span class="pro-note" id="hs-note"></span>
+          </div>
+        </details>
+        <details class="pro-panel">
+          <summary>Connect Salesforce (username-password flow)</summary>
+          <div class="panel-body">
+            <div style="font-size:13px;color:var(--muted);margin:6px 0">Needs a connected app's key/secret and your security token. Nothing is stored — pulled data fills the same slots as a manual drop.</div>
+            <input class="txt" id="sf-user" placeholder="you@company.com">
+            <input type="password" class="txt" id="sf-pass" placeholder="password">
+            <input type="password" class="txt" id="sf-token" placeholder="security token">
+            <input class="txt" id="sf-key" placeholder="connected app consumer key">
+            <input type="password" class="txt" id="sf-secret" placeholder="connected app consumer secret">
+            <button class="pro-btn" id="sf-go" style="margin-top:6px">Pull accounts &amp; cases now</button>
+            <span class="pro-note" id="sf-note"></span>
+          </div>
+        </details>
+        <details class="pro-panel">
+          <summary>Connect Stripe (paste your secret key)</summary>
+          <div class="panel-body">
+            <input type="password" class="txt" id="stripe-key" placeholder="sk_live_... or sk_test_...">
+            <button class="pro-btn" id="stripe-go">Pull payments now</button>
+            <span class="pro-note" id="stripe-note"></span>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
   <div id="results">
     <div id="warnings" style="display:none"></div>
     <p class="summary" id="summary"></p>
@@ -223,8 +266,10 @@
       <button class="primary" id="dl-email">Download the Monday email (HTML)</button>
       <button id="dl-md">Download as a checklist (Markdown)</button>
       <button id="copy">Copy for pasting into Slack</button>
+      <button id="share">Copy a share link for your boss</button>
     </div>
-    <p class="hint">This runs entirely in your browser — your data never leaves this tab. Downloads and Slack copy work here; CRM pulls and the Monday email need the local version (one command, on GitHub).</p>
+    <p class="hint" id="share-note" style="display:none"></p>
+    <p class="hint">This runs entirely in your browser — your data never leaves this tab. CRM pulls and share links work here too. The one thing that needs the local version is the automatic Monday email — one command on GitHub.</p>
   </div>
 
 <script src="app.js"></script>
@@ -369,6 +414,76 @@ function saveSession() {
   for (const id of SLIDER_IDS) config[id] = Number(document.getElementById(id).value);
   try { localStorage.setItem(LS_KEY, JSON.stringify({ files, config, when: new Date().toISOString().slice(0, 10) })); } catch {}
 }
+
+// ---- one-click pulls (same-origin serverless proxy; token rides in the request only) ----
+async function pullIntoFiles(note, path, body) {
+  note.textContent = 'Pulling your data…';
+  try {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'failed');
+    for (const [name, csv] of Object.entries(d.files)) files[name] = csv;
+    refresh();
+    note.textContent = '✓ Pulled and loaded — hit "Find my at-risk customers".';
+  } catch (e) { note.textContent = '⚠ ' + e.message; }
+}
+document.getElementById('hs-go').onclick = () => pullIntoFiles(
+  document.getElementById('hs-note'), '/api/hubspot', { token: document.getElementById('hs-token').value.trim() });
+document.getElementById('sf-go').onclick = () => pullIntoFiles(
+  document.getElementById('sf-note'), '/api/salesforce', {
+    username: document.getElementById('sf-user').value.trim(),
+    password: document.getElementById('sf-pass').value,
+    securityToken: document.getElementById('sf-token').value.trim(),
+    clientId: document.getElementById('sf-key').value.trim(),
+    clientSecret: document.getElementById('sf-secret').value,
+  });
+document.getElementById('stripe-go').onclick = async () => {
+  const note = document.getElementById('stripe-note');
+  const key = document.getElementById('stripe-key').value.trim();
+  if (!key) { note.textContent = 'Paste your Stripe secret key first (Settings → API keys).'; return; }
+  note.textContent = 'Pulling your payments…';
+  try {
+    const r = await fetch('/api/stripe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secretKey: key }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'failed');
+    files[d.filename] = d.csv;
+    refresh();
+    note.textContent = `✓ ${d.count} payments pulled and added — hit "Find my at-risk customers" again.`;
+  } catch (e) { note.textContent = '⚠ ' + e.message; }
+};
+
+// ---- share links: payload embedded in the URL fragment, nothing stored ----
+// deflate the digest HTML into /share#v=c:<base64> — no server state, works
+// forever, still read-only. Falls back to raw base64 without CompressionStream.
+async function shareUrl(html) {
+  const bytes = new TextEncoder().encode(html);
+  const b64 = (u8) => {
+    let out = '';
+    for (let i = 0; i < u8.length; i += 0x8000) out += String.fromCharCode(...u8.subarray(i, i + 0x8000));
+    return btoa(out);
+  };
+  let payload;
+  if ('CompressionStream' in window) {
+    const blob = await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'))).blob();
+    payload = 'c:' + b64(new Uint8Array(await blob.arrayBuffer()));
+  } else {
+    payload = 'r:' + b64(bytes);
+  }
+  return location.origin + '/share#v=' + encodeURIComponent(payload);
+}
+document.getElementById('share').onclick = async () => {
+  const note = document.getElementById('share-note');
+  if (!last) return;
+  note.style.display = 'block';
+  note.textContent = 'Packing the risk list into the link…';
+  try {
+    const url = await shareUrl(last.html);
+    let copied = true;
+    try { await navigator.clipboard.writeText(url); } catch { copied = false; }
+    note.textContent = (copied ? '✓ Copied ' : 'Share link (copy it): ') + url.slice(0, 120) + (url.length > 120 ? '…' : '') + ' — the full list travels inside the link itself; it never expires.';
+  } catch (e) { note.textContent = '⚠ ' + e.message; }
+};
+
 (function offerRestore() {
   let s;
   try { s = JSON.parse(localStorage.getItem(LS_KEY)); } catch { return; }

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Churnlight — shared risk list</title>
+<style>body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:#fafafa;color:#111827;margin:0;padding:0}.load{display:flex;justify-content:center;padding:80px 20px;color:#6b7280;font-size:15px}</style></head>
+<body><div class="load" id="load">Decoding the shared risk list…</div>
+<script>
+(async function () {
+  const raw = location.hash.replace(/^#/, '');
+  const m = raw.match(/(?:^|&)v=([^&]+)/);
+  const box = document.getElementById('load');
+  if (!m) { box.textContent = 'This link is missing its payload — ask for a fresh share link.'; return; }
+  const payload = decodeURIComponent(m[1]);
+  const b64ToBytes = (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  try {
+    let html;
+    if (payload.startsWith('c:')) {
+      const cs = new DecompressionStream('deflate-raw');
+      const blob = await new Response(new Blob([b64ToBytes(payload.slice(2))]).stream().pipeThrough(cs)).blob();
+      html = await blob.text();
+    } else if (payload.startsWith('r:')) {
+      html = new TextDecoder().decode(b64ToBytes(payload.slice(2)));
+    } else { throw new Error('bad version'); }
+    box.remove();
+    document.open(); document.write(html); document.close();
+  } catch (e) {
+    box.textContent = 'This share link could not be decoded — it may be truncated by a chat app. Ask for a fresh one.';
+  }
+})();
+</script></body></html>
