@@ -221,13 +221,14 @@
     <span class="tick-item"><b>2 failed payments</b> — fully recoverable churn</span>
     <span class="tick-item"><b>Ticket stale 31 days</b> — give a dated commitment</span>
     <span class="tick-item"><b>2 cancelled meetings</b> — the relationship is drifting</span>
+    <span class="tick-item"><b>Half the seats idle</b> — nobody's using what you sold</span>
   </div>
 </div>
 
 <div class="wrap">
   <div class="stats">
     <div class="stat"><b><em>$0</em></b><span>Forever free, MIT licensed. Your data never leaves your machine.</span></div>
-    <div class="stat"><b>6</b><span>Transparent rules. Every signal is a slider you control — not a black box.</span></div>
+    <div class="stat"><b>7</b><span>Transparent rules. Every signal is a slider you control — not a black box.</span></div>
     <div class="stat"><b><span class="lt">&lt;</span>60s</b><span>From clone to your first risk list. No admin, no migration project.</span></div>
   </div>
 </div>
@@ -240,7 +241,7 @@
     </div>
     <div class="steps">
       <div class="step-card"><span class="step-num">01</span><h3>Drag in your exports</h3><p>Stripe, support tickets, product usage, meetings — whatever you have. Missing files are fine; it works with what you drop.</p></div>
-      <div class="step-card"><span class="step-num">02</span><h3>Six rules score every account</h3><p>Champion left. Renewal coming with no contact. Usage down. Stale tickets. Failed payments. Cancelled meetings. Each one weighted, each one visible.</p></div>
+      <div class="step-card"><span class="step-num">02</span><h3>Seven rules score every account</h3><p>Champion left. Renewal coming with no contact. Usage down. Stale tickets. Failed payments. Cancelled meetings. Seats going cold. Each one weighted, each one visible.</p></div>
       <div class="step-card"><span class="step-num">03</span><h3>Monday morning, the list arrives</h3><p>Every account: why it's at risk, what to do, and the MRR on the line. Attach the email or paste it straight into Slack.</p></div>
     </div>
   </section>
@@ -259,6 +260,7 @@
       <div class="rule-row"><span class="rule-name">Usage drop</span><span class="rule-what">Usage down 40%+ vs the prior window</span><span class="rule-wt">6</span></div>
       <div class="rule-row"><span class="rule-name">Cancelled meetings</span><span class="rule-what">2+ no-shows in 60 days — drifting away</span><span class="rule-wt">6</span></div>
       <div class="rule-row"><span class="rule-name">Stale ticket</span><span class="rule-what">Open ticket older than 14 days</span><span class="rule-wt">5</span></div>
+      <div class="rule-row"><span class="rule-name">Seats going cold</span><span class="rule-what">Half your users haven't logged in for 30+ days</span><span class="rule-wt">6</span></div>
     </div>
   </section>
 
@@ -270,18 +272,21 @@
     </div>
     <div class="feat-table">
       <div class="feat-group">Core engine</div>
-      <div class="feat-row"><span class="feat-name">Risk scanner</span><span class="feat-what">Scores every account against 6 weighted rules — champion gone, renewal with no contact, failed payments, usage drop, cancelled meetings, stale tickets</span></div>
+      <div class="feat-row"><span class="feat-name">Risk scanner</span><span class="feat-what">Scores every account against 7 weighted rules — champion gone, renewal with no contact, failed payments, usage drop, cancelled meetings, stale tickets, seats going cold</span></div>
       <div class="feat-row"><span class="feat-name">Why / Do cards</span><span class="feat-what">Every flagged account ships with the reason in plain words and the specific next move</span></div>
       <div class="feat-row"><span class="feat-name">Rule sliders</span><span class="feat-what">Every threshold and weight is adjustable in the UI — no code, no black box</span></div>
       <div class="feat-row"><span class="feat-name">MRR at stake</span><span class="feat-what">Risk list is ordered by dollars on the line, not alphabetically</span></div>
       <div class="feat-group">Input</div>
-      <div class="feat-row"><span class="feat-name">Drag-and-drop CSVs</span><span class="feat-what">Usage events, tickets, meetings, payments — drop whatever exports you have; missing files are fine</span></div>
+      <div class="feat-row"><span class="feat-name">Drag-and-drop CSVs</span><span class="feat-what">Usage events, tickets, meetings, payments, user seats — drop whatever exports you have; missing files are fine</span></div>
+      <div class="feat-group">One-click pulls</div>
       <div class="feat-row"><span class="feat-name">Stripe auto-connect</span><span class="feat-what">Paste a Stripe secret key and payments pull in directly — no CSV exports</span></div>
-      <div class="feat-group">Output &amp; delivery</div>
+      <div class="feat-row"><span class="feat-name">HubSpot & Salesforce</span><span class="feat-what">Paste a private app token (or Salesforce credentials) and accounts, deals, tickets and cases normalize straight into the scanner — no exports, no mapping</span></div>
+      <div class="feat-group">Output & delivery</div>
       <div class="feat-row"><span class="feat-name">Web app</span><span class="feat-what">Zero-dependency server on localhost:8788 — your data never leaves your machine</span></div>
       <div class="feat-row"><span class="feat-name">Email digests</span><span class="feat-what">Formatted HTML + Markdown + Slack-ready output, one click each</span></div>
-      <div class="feat-row"><span class="feat-name">Team email send</span><span class="feat-what">Send the digest straight to your team via Resend (free tier works)</span></div>
-      <div class="feat-row"><span class="feat-name">Monday scheduler</span><span class="feat-what">Set <code>CHURNLIGHT_EMAIL_TO</code> (plus a free Resend key) and the server emails the risk list every Monday at 8:00 AM automatically</span></div>
+      <div class="feat-row"><span class="feat-name">Share links</span><span class="feat-what">One click makes a read-only link to this week's risk list — no login for your boss, expires in 7 days</span></div>
+      <div class="feat-row"><span class="feat-name">Session restore</span><span class="feat-what">Your files and rule settings are remembered locally — next Monday, drop nothing, just hit the button</span></div>
+      <div class="feat-row"><span class="feat-name">Monday scheduler</span><span class="feat-what">Join the Monday list with your email — the risk list is ready every Monday at 8:00 AM automatically</span></div>
       <div class="feat-group">License</div>
       <div class="feat-row"><span class="feat-name">MIT, open source</span><span class="feat-what">Fork it, host it, modify it, run it at work. No account, no trial, no card, no upgrade screens — ever</span></div>
     </div>
