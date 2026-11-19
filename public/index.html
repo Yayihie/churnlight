@@ -109,6 +109,23 @@
       </div>
       <div class="pro-actions" style="display:block">
         <details class="pro-panel">
+          <summary>Connect HubSpot (paste your private app token)</summary>
+          <input type="password" id="hs-token" placeholder="pat-na1-... (Settings → Integrations → Private Apps)" style="width:100%;padding:10px;margin:8px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
+          <button class="pro-btn" id="hs-go">Pull accounts & tickets now</button>
+          <span class="pro-note" id="hs-note"></span>
+        </details>
+        <details class="pro-panel">
+          <summary>Connect Salesforce (username-password flow)</summary>
+          <div style="font-size:13px;color:var(--muted);margin:6px 0">Needs a connected app's key/secret and your security token. Nothing is stored — pulled data fills the same CSV slots as a manual drop.</div>
+          <input id="sf-user" placeholder="you@company.com" style="width:100%;padding:10px;margin:4px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
+          <input type="password" id="sf-pass" placeholder="password" style="width:100%;padding:10px;margin:4px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
+          <input type="password" id="sf-token" placeholder="security token" style="width:100%;padding:10px;margin:4px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
+          <input id="sf-key" placeholder="connected app consumer key" style="width:100%;padding:10px;margin:4px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
+          <input type="password" id="sf-secret" placeholder="connected app consumer secret" style="width:100%;padding:10px;margin:4px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
+          <button class="pro-btn" id="sf-go" style="margin-top:6px">Pull accounts & cases now</button>
+          <span class="pro-note" id="sf-note"></span>
+        </details>
+        <details class="pro-panel">
           <summary>Connect Stripe (paste your secret key)</summary>
           <input type="password" id="stripe-key" placeholder="sk_live_... or sk_test_..." style="width:100%;padding:10px;margin:8px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
           <button class="pro-btn" id="stripe-go">Pull payments now</button>
@@ -265,6 +282,27 @@ document.getElementById('copy').onclick = async () => {
 };
 
 // ---- integrations (free for everyone) ----
+async function pullIntoFiles(btn, note, path, body) {
+  note.textContent = 'Pulling your data…';
+  try {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'failed');
+    for (const [name, csv] of Object.entries(d.files)) files[name] = csv;
+    refresh();
+    note.textContent = '✓ Pulled and loaded — hit "Find my at-risk customers".';
+  } catch (e) { note.textContent = '⚠ ' + e.message; }
+}
+document.getElementById('hs-go').onclick = () => pullIntoFiles(
+  'hs-go', document.getElementById('hs-note'), '/api/hubspot', { token: document.getElementById('hs-token').value.trim() });
+document.getElementById('sf-go').onclick = () => pullIntoFiles(
+  'sf-go', document.getElementById('sf-note'), '/api/salesforce', {
+    username: document.getElementById('sf-user').value.trim(),
+    password: document.getElementById('sf-pass').value,
+    securityToken: document.getElementById('sf-token').value.trim(),
+    clientId: document.getElementById('sf-key').value.trim(),
+    clientSecret: document.getElementById('sf-secret').value,
+  });
 document.getElementById('stripe-go').onclick = async () => {
   const note = document.getElementById('stripe-note');
   const key = document.getElementById('stripe-key').value.trim();

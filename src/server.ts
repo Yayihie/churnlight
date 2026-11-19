@@ -10,6 +10,7 @@ import { buildRiskList } from "./rules.js";
 import { renderMarkdown, renderEmailHtml } from "./digest.js";
 import { DEFAULT_CONFIG, Account, Meeting, Payment, Ticket, UsageEvent, RuleConfig } from "./types.js";
 import { normalizeDateFields } from "./dates.js";
+import { pullHubSpot, pullSalesforce } from "./crm.js";
 import { pullStripe, paymentsToCsv, sendEmail, startScheduler, isValidEmail } from "./pro.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -230,6 +231,26 @@ const server = http.createServer((req, res) => {
       armDigest(to);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ armed: true, to, emailed: !!process.env.RESEND_API_KEY }));
+    });
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/hubspot") {
+    readJson(req, res, async (body: any) => {
+      const files = await pullHubSpot(String(body.token || ""));
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ files }));
+    });
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/salesforce") {
+    readJson(req, res, async (body: any) => {
+      const files = await pullSalesforce({
+        username: String(body.username || ""), password: String(body.password || ""),
+        securityToken: String(body.securityToken || ""), clientId: String(body.clientId || ""),
+        clientSecret: String(body.clientSecret || ""),
+      });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ files }));
     });
     return;
   }
