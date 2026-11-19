@@ -33,8 +33,14 @@ export interface Payment {
 
 export interface Meeting {
   accountId: string;
-  date: string;
+  date: string;           // ISO date
   status: "held" | "cancelled" | "no_show";
+}
+
+export interface UserSeat {
+  accountId: string;
+  name: string;           // user email or name from the export
+  lastActiveOn: string;   // ISO date — last time this person used the product
 }
 
 export interface Signal {
@@ -62,6 +68,7 @@ export interface RuleConfig {
   ticketStaleDays: number;       // open ticket older than N days
   paymentFailures: number;       // >= N failures
   cancelledMeetings: number;     // >= N cancelled/no-show in window
+  inactiveUserDays: number;      // a seat idle for N days counts as inactive
   weights: Record<string, number>;
 }
 
@@ -73,6 +80,7 @@ export const DEFAULT_CONFIG: RuleConfig = {
   ticketStaleDays: 14,
   paymentFailures: 2,
   cancelledMeetings: 2,
+  inactiveUserDays: 30,
   weights: {
     champion_gone: 8,
     usage_drop: 6,
@@ -80,5 +88,6 @@ export const DEFAULT_CONFIG: RuleConfig = {
     stale_ticket: 5,
     failed_payments: 7,
     meeting_no_show: 6,
+    users_inactive: 6,
   },
 };

@@ -39,10 +39,10 @@ describe("normalizeDateFields", () => {
     expect(warnBox).toHaveLength(1);
     expect(warnBox[0]).toContain("DD/MM/YYYY");
   });
-  it("assumes MM/DD for ambiguous files but says so", () => {
+  it("converts ambiguous files to ISO US and says so", () => {
     warnBox.length = 0;
     const out = normalizeDateFields(rows("01/10/2026"), FIELDS, "accounts.csv", warn);
-    expect(out[0].renewal_on).toBe("01/10/2026"); // left for Date.parse (US)
+    expect(out[0].renewal_on).toBe("2026-01-10"); // MM/DD assumption, now really applied
     expect(warnBox[0]).toContain("assumed MM/DD/YYYY");
   });
   it("leaves mixed files untouched with a loud warning", () => {

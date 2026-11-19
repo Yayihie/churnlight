@@ -32,15 +32,19 @@ export function sniffDates(rows: Record<string, string>[], fields: string[]): Sn
   return { format: eu > 0 && us === 0 ? "eu" : "us", ambiguous: amb, mixed: eu > 0 && us > 0, example };
 }
 
-// Convert one provably-EU slash date to ISO YYYY-MM-DD.
-function toIso(s: string): string {
+// Convert one slash date to ISO YYYY-MM-DD in the given order.
+function toIso(s: string, eu: boolean): string {
   const m = SLASH.exec(s.trim());
   if (!m) return s;
-  return `${m[3]}-${String(Number(m[2])).padStart(2, "0")}-${String(Number(m[1])).padStart(2, "0")}`;
+  const month = eu ? Number(m[2]) : Number(m[1]);
+  const day = eu ? Number(m[1]) : Number(m[2]);
+  return `${m[3]}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 // Normalize the date fields of a parsed CSV file before the rules see it.
-// Warns at most a few times per file; never throws.
+// Provably-EU files convert as DD/MM; US/ambiguous files convert as MM/DD —
+// the rules engine parses ISO only, so "assume US" must mean real conversion,
+// not leaving slash strings for Date.parse to mangle. Never throws.
 export function normalizeDateFields(
   rows: Record<string, string>[], fields: string[], label: string, warn: (m: string) => void,
 ): Record<string, string>[] {
@@ -51,15 +55,13 @@ export function normalizeDateFields(
     warn(`${label}: mixed date formats detected (e.g. ${s.example}) — day/month order can't be told apart; check these rows`);
     return rows;
   }
-  if (s.format === "eu") {
-    warn(`${label}: dates are DD/MM/YYYY (e.g. ${s.example}) — converted so rules fire on the right day`);
-    return rows.map((r) => {
-      const c: Record<string, string> = { ...r };
-      for (const f of fields) c[f] = toIso(r[f] || "");
-      return c;
-    });
-  }
-  if (s.ambiguous > 0)
+  const eu = s.format === "eu";
+  if (eu) warn(`${label}: dates are DD/MM/YYYY (e.g. ${s.example}) — converted so rules fire on the right day`);
+  else if (s.ambiguous > 0)
     warn(`${label}: ${s.ambiguous} date${s.ambiguous === 1 ? "" : "s"} like ${s.example} — assumed MM/DD/YYYY`);
-  return rows;
+  return rows.map((r) => {
+    const c: Record<string, string> = { ...r };
+    for (const f of fields) c[f] = toIso(r[f] || "", eu);
+    return c;
+  });
 }

@@ -2,13 +2,14 @@
 // Churnlight web app — zero-dependency local server (node:http only).
 // Non-technical flow: open http://localhost:8788 → drag CSVs in → read the risk list → download the email.
 import * as http from "node:http";
+import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseCsv } from "./csv.js";
 import { buildRiskList } from "./rules.js";
 import { renderMarkdown, renderEmailHtml } from "./digest.js";
-import { DEFAULT_CONFIG, Account, Meeting, Payment, Ticket, UsageEvent, RuleConfig } from "./types.js";
+import { DEFAULT_CONFIG, Account, Meeting, Payment, Ticket, UsageEvent, UserSeat, RuleConfig } from "./types.js";
 import { normalizeDateFields } from "./dates.js";
 import { pullHubSpot, pullSalesforce } from "./crm.js";
 import { pullStripe, paymentsToCsv, sendEmail, startScheduler, isValidEmail } from "./pro.js";
@@ -123,13 +124,13 @@ function analyze(payload: WebPayload) {
 
   // Generic per-file scrubber: drops rows without an account id or an
   // unparseable date, and counts orphan rows (id not present in accounts.csv).
-  function scrub<T>(rows: Record<string, string>[], label: string, build: (r: Record<string, string>) => T): T[] {
+  function scrub<T>(rows: Record<string, string>[], label: string, build: (r: Record<string, string>) => T, dateOf: (r: Record<string, string>) => string = (r) => r.date): T[] {
     const out: T[] = [];
     let noId = 0, badDate = 0, orphan = 0;
     for (const r of rows) {
       const id = r.account_id || r.account || "";
       if (!id) { noId++; continue; }
-      if (!isUsableDate(r.date)) { badDate++; continue; }
+      if (!isUsableDate(dateOf(r))) { badDate++; continue; }
       if (!ids.has(id)) { orphan++; continue; }
       out.push(build(r));
     }
@@ -157,8 +158,16 @@ function analyze(payload: WebPayload) {
   const champions = scrub(normalizeDateFields(find("champions.csv", "champion_changes.csv"), ["date"], "champion changes", warn), "champion changes", (r) => ({
     accountId: r.account_id || r.account, date: r.date, note: r.note || "champion left",
   }));
+  const users = scrub<UserSeat>(
+    normalizeDateFields(find("users.csv", "seats.csv"), ["date", "last_active_on", "last_active", "last_seen_on", "last_seen"], "users.csv", warn),
+    "users", (r) => ({
+      accountId: r.account_id || r.account, name: r.name || r.email || r.user_id || "(user)",
+      lastActiveOn: r.last_active_on || r.last_active || r.last_seen_on || r.last_seen || r.date || "1970-01-01",
+    }),
+    (r) => r.last_active_on || r.last_active || r.last_seen_on || r.last_seen || r.date,
+  );
   const items = buildRiskList(
-    { accounts, usage, tickets, payments, meetings, champions }, today, cfg,
+    { accounts, usage, tickets, payments, meetings, champions, users }, today, cfg,
   );
   return { items, warnings, md: renderMarkdown(items), html: renderEmailHtml(items), config: cfg, today: today.toISOString().slice(0, 10) };
 }
@@ -182,8 +191,27 @@ if (process.env.RESEND_API_KEY && process.env.CHURNLIGHT_EMAIL_TO) {
   armDigest(process.env.CHURNLIGHT_EMAIL_TO);
 }
 
+// Shareable read-only links — the risk page without a login. In-memory with
+// a 7-day expiry (pruned lazily on read). This is a local-server feature;
+// a serverless host has no shared memory, so links die with the process.
+const shares = new Map<string, { html: string; expires: number }>();
+const SHARE_TTL = 7 * 86_400_000;
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || "/", `http://localhost:${PORT}`);
+  if (req.method === "GET" && url.pathname.startsWith("/share/")) {
+    const id = url.pathname.slice("/share/".length);
+    const s = shares.get(id);
+    if (!s || s.expires < Date.now()) {
+      shares.delete(id);
+      res.writeHead(410, { "Content-Type": "text/plain" });
+      res.end("This share link has expired. Ask for a fresh one.");
+      return;
+    }
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(s.html);
+    return;
+  }
   if (req.method === "POST" && url.pathname === "/analyze") {
     let body = "";
     req.on("data", (c) => { body += c; if (body.length > 25_000_000) req.destroy(); });
@@ -197,6 +225,24 @@ const server = http.createServer((req, res) => {
       } catch (e) {
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: String(e) }));
+      }
+    });
+    return;
+  }
+  if (req.method === "POST" && url.pathname === "/api/share") {
+    let body = "";
+    req.on("data", (c) => { body += c; if (body.length > 25_000_000) req.destroy(); });
+    req.on("end", () => {
+      try {
+        const { html } = JSON.parse(body) as { html: string };
+        if (typeof html !== "string" || html.length < 20) throw new Error("Nothing to share yet — run the analysis first.");
+        const id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+        shares.set(id, { html, expires: Date.now() + SHARE_TTL });
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ url: `http://${req.headers.host || `localhost:${PORT}`}/share/${id}`, expiresDays: 7 }));
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: String(e).replace(/^Error: /, "") }));
       }
     });
     return;

@@ -1,5 +1,5 @@
 // The rules engine — transparent, editable, no black box.
-import { Account, ChampionExit, Meeting, Payment, RuleConfig, Signal, Ticket, UsageEvent, DEFAULT_CONFIG } from "./types.js";
+import { Account, ChampionExit, Meeting, Payment, RuleConfig, Signal, Ticket, UsageEvent, UserSeat, DEFAULT_CONFIG } from "./types.js";
 
 const MS_DAY = 86_400_000;
 export const daysAgo = (iso: string, today: Date): number =>
@@ -14,6 +14,7 @@ export interface Inputs {
   payments: Payment[];
   meetings: Meeting[];
   champions: ChampionExit[];
+  users?: UserSeat[];       // optional per-user seats (users.csv)
 }
 
 export function evaluate(
@@ -120,6 +121,23 @@ export function evaluate(
         action: "Reschedule directly; if they cancel again, ask the champion's manager for a 15-min check-in",
         weight: W.meeting_no_show,
         math: `${cancels.length} cancels ≥ ${cfg.cancelledMeetings} in 60d · weight ${W.meeting_no_show}`,
+      });
+    }
+  }
+
+  // 7. Seats going cold — users of the account who stopped showing up.
+  //    "3 seats left, renewal in 60 days" hides here long before usage drops.
+  for (const acct of input.accounts) {
+    const seats = (input.users || []).filter((u) => u.accountId === acct.id);
+    if (seats.length === 0) continue;
+    const idle = seats.filter((u) => daysAgo(u.lastActiveOn, today) >= cfg.inactiveUserDays).length;
+    if (idle >= Math.max(1, Math.ceil(seats.length / 2))) {
+      signals.push({
+        accountId: acct.id, rule: "users_inactive", severity: idle === seats.length ? "high" : "medium",
+        reason: `${idle} of ${seats.length} user${seats.length === 1 ? "" : "s"} haven't been active in ${cfg.inactiveUserDays}+ days`,
+        action: "Check who actually owns the rollout; re-onboard the idle users or right-size the seats",
+        weight: W.users_inactive,
+        math: `${idle} of ${seats.length} idle ≥ half, idle ≥ ${cfg.inactiveUserDays}d · weight ${W.users_inactive}`,
       });
     }
   }
