@@ -48,6 +48,17 @@ function loadAccounts(rows: Record<string, string>[]): Account[] {
 function analyze(payload: WebPayload) {
   const files = payload.files || {};
   const cfg: RuleConfig = { ...DEFAULT_CONFIG, ...(payload.config || {}) };
+  // coerce/validate thresholds — a NaN from bad input would silently
+  // disable rules, so every numeric falls back to its default
+  for (const k of Object.keys(DEFAULT_CONFIG) as (keyof RuleConfig)[]) {
+    if (k === "weights") continue;
+    const n = Number(cfg[k]);
+    if (!Number.isFinite(n)) (cfg as any)[k] = DEFAULT_CONFIG[k]; else (cfg as any)[k] = n;
+  }
+  for (const k of Object.keys(DEFAULT_CONFIG.weights) as (keyof RuleConfig["weights"])[]) {
+    const n = Number(cfg.weights?.[k]);
+    cfg.weights[k] = Number.isFinite(n) ? n : DEFAULT_CONFIG.weights[k];
+  }
   const today = payload.today ? new Date(payload.today + "T00:00:00Z") : new Date();
   const find = (...names: string[]) => {
     for (const n of names) {
@@ -142,6 +153,10 @@ const server = http.createServer((req, res) => {
   res.end("Not found");
 });
 
-server.listen(PORT, () => {
+// Bind to loopback only — this tool holds your Stripe key and Resend key;
+// on 0.0.0.0 anyone on the same network could use them. Set HOST to
+// override deliberately.
+const HOST = process.env.HOST || "127.0.0.1";
+server.listen(PORT, HOST, () => {
   console.log(`\n  Churnlight is running. Open this in your browser:\n\n     http://localhost:${PORT}\n\n  Keep this window open while you use it. Close it (Ctrl+C) when done.\n`);
 });
