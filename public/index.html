@@ -203,12 +203,16 @@ function render(d) {
     wbox.innerHTML = `<div class="warn"><strong>Heads up — some data couldn't be used:</strong><ul>${d.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
     wbox.style.display = 'block';
   } else { wbox.style.display = 'none'; wbox.innerHTML = ''; }
+  const hasWarns = d.warnings && d.warnings.length > 0;
   document.getElementById('summary').textContent =
     d.items.length === 0
-      ? 'Good news — nothing flagged this week.'
-      : `${d.items.length} account${d.items.length>1?'s':''} need attention this week.`;
+      ? (hasWarns ? 'Nothing could be flagged — see the warning above.'
+                  : 'Good news — nothing flagged this week.')
+      : `${d.items.length} account${d.items.length>1?'s':''} ${d.items.length>1?'need':'needs'} attention this week.`;
   cards.innerHTML = d.items.length === 0
-    ? `<div class="empty"><div class="big">🎉</div>Nothing flagged. Everyone looks healthy by the rules you set.</div>`
+    ? (hasWarns
+        ? `<div class="empty"><div class="big">⚠️</div>Nothing could be flagged from this data. Fix the warning above and try again.</div>`
+        : `<div class="empty"><div class="big">🎉</div>Nothing flagged. Everyone looks healthy by the rules you set.</div>`)
     : d.items.map(it => {
         const sigs = it.signals.map(s =>
           `<div class="sig"><div class="why"><strong>Why:</strong> ${esc(s.reason)}</div><div class="do"><strong>Do:</strong> ${esc(s.action)}</div></div>`).join('');

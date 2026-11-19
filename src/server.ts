@@ -108,6 +108,12 @@ function analyze(payload: WebPayload) {
   };
   const accounts = loadAccounts(find("accounts.csv"), warn);
   const ids = new Set(accounts.map((a) => a.id));
+  // No accounts loaded = no risk list is possible. Saying "nothing flagged"
+  // here would be a false all-clear.
+  if (!files || Object.keys(files).length === 0)
+    warn("No files were analyzed — drop your CSV exports to get a risk list.");
+  else if (accounts.length === 0)
+    warn("No usable accounts were loaded from accounts.csv — check the id column name.");
 
   // Generic per-file scrubber: drops rows without an account id or an
   // unparseable date, and counts orphan rows (id not present in accounts.csv).
