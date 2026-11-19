@@ -124,22 +124,15 @@
   .rule-head { display:grid; grid-template-columns:200px 1fr 64px; gap:20px; padding:0 6px 12px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#5c6875; font-weight:600; }
   .rule-head :last-child { text-align:right; }
 
-  /* pricing */
-  .tiers { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
-  .tier { border:1px solid var(--line); border-radius:18px; background:var(--card); padding:34px; display:grid; grid-template-columns:1fr auto; gap:26px; transition:transform .2s, box-shadow .2s; }
-  .tier:hover { transform:translateY(-4px); box-shadow:0 20px 44px -20px rgba(16,20,24,.25); }
-  .tier.pro { border-color:var(--ink); box-shadow:0 12px 40px -16px rgba(16,20,24,.28); }
-  .tier-name { font-size:19px; font-weight:700; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .tier-tag { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-deep); background:rgba(58,142,252,.1); padding:4px 10px; border-radius:99px; }
-  .tier-desc { font-size:14.5px; color:var(--muted); margin-top:8px; max-width:320px; }
-  .tier ul { list-style:none; margin:20px 0 0; padding:0; }
-  .tier li { font-size:14.5px; padding:7px 0; color:var(--ink); display:flex; gap:10px; }
-  .tier li::before { content:"✓"; color:var(--green); font-weight:700; }
-  .tier-side { display:flex; flex-direction:column; justify-content:center; align-items:flex-end; text-align:right; min-width:150px; }
-  .tier-price { font-size:38px; font-weight:800; letter-spacing:-1.5px; }
-  .tier-price small { font-size:15px; font-weight:500; color:var(--muted); letter-spacing:0; }
-  .tier .btn { margin-top:18px; padding:12px 22px; font-size:14px; }
-  .tier-note { font-size:12.5px; color:var(--muted-2); margin-top:12px; max-width:170px; }
+  /* feature breakdown table */
+  .feat-table { border:1px solid var(--line); border-radius:18px; background:var(--card); overflow:hidden; }
+  .feat-group { padding:14px 28px 12px; font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-deep); background:var(--paper); border-bottom:1px solid var(--line); }
+  .feat-row { display:grid; grid-template-columns:220px 1fr; gap:24px; padding:15px 28px; border-bottom:1px solid var(--line); transition:background .15s; }
+  .feat-row:last-child { border-bottom:0; }
+  .feat-row:hover { background:var(--paper); }
+  .feat-name { font-weight:600; font-size:15px; color:var(--ink); }
+  .feat-what { font-size:14.5px; color:var(--muted); line-height:1.6; }
+  .feat-what code { font-family:ui-monospace,Menlo,monospace; font-size:13px; background:var(--paper); border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--accent-deep); }
 
   /* honesty band */
   .honesty { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:34px 38px; font-size:15.5px; color:var(--muted); line-height:1.7; }
@@ -169,8 +162,8 @@
     .rule-row, .rule-head { grid-template-columns:1fr auto; }
     .rule-what { grid-column:1 / -1; }
     .rules-panel { padding:24px 18px; }
-    .tier { grid-template-columns:1fr; }
-    .tier-side { align-items:flex-start; text-align:left; }
+    .feat-row { grid-template-columns:1fr; gap:4px; padding:14px 18px; }
+    .feat-group { padding:12px 18px 10px; }
     .nav-links a:not(.nav-cta) { display:none; }
     .demo-body { font-size:12px; }
     .demo-line { white-space:normal; }
@@ -272,28 +265,24 @@
     <div class="sec-head">
       <div class="kicker">What's included</div>
       <h2>Everything. Free. Everyone.</h2>
-      <p class="sec-sub">There is no paid tier. Stripe auto-connect, scheduled Monday emails, every rule and slider — all of it is in the repo, MIT licensed, for anyone.</p>
+      <p class="sec-sub">There is no paid tier. Every feature below ships in the repo, MIT licensed, for anyone.</p>
     </div>
-    <div class="tiers">
-      <div class="tier">
-        <div>
-          <div class="tier-name">Everything included</div>
-          <p class="tier-desc">One download. No account, no trial, no card, no "upgrade" screens.</p>
-          <ul>
-            <li>Drag-and-drop web app, all 6 rules + sliders</li>
-            <li>Risk cards with Why / Do for every signal</li>
-            <li>Stripe auto-connect — pull payments directly</li>
-            <li>Email digests + scheduled Monday send</li>
-            <li>Email HTML + Markdown + Slack output</li>
-            <li>MIT licensed, self-hosted, runs offline</li>
-          </ul>
-        </div>
-        <div class="tier-side">
-          <div class="tier-price">$0</div>
-          <a class="btn btn-dark" href="https://github.com/Yayihie/churnlight">Clone the repo</a>
-          <p class="tier-note">Forever. That's the whole pricing page.</p>
-        </div>
-      </div>
+    <div class="feat-table">
+      <div class="feat-group">Core engine</div>
+      <div class="feat-row"><span class="feat-name">Risk scanner</span><span class="feat-what">Scores every account against 6 weighted rules — champion gone, renewal with no contact, failed payments, usage drop, cancelled meetings, stale tickets</span></div>
+      <div class="feat-row"><span class="feat-name">Why / Do cards</span><span class="feat-what">Every flagged account ships with the reason in plain words and the specific next move</span></div>
+      <div class="feat-row"><span class="feat-name">Rule sliders</span><span class="feat-what">Every threshold and weight is adjustable in the UI — no code, no black box</span></div>
+      <div class="feat-row"><span class="feat-name">MRR at stake</span><span class="feat-what">Risk list is ordered by dollars on the line, not alphabetically</span></div>
+      <div class="feat-group">Input</div>
+      <div class="feat-row"><span class="feat-name">Drag-and-drop CSVs</span><span class="feat-what">Usage events, tickets, meetings, payments — drop whatever exports you have; missing files are fine</span></div>
+      <div class="feat-row"><span class="feat-name">Stripe auto-connect</span><span class="feat-what">Paste a Stripe secret key and payments pull in directly — no CSV exports</span></div>
+      <div class="feat-group">Output &amp; delivery</div>
+      <div class="feat-row"><span class="feat-name">Web app</span><span class="feat-what">Zero-dependency server on localhost:8788 — your data never leaves your machine</span></div>
+      <div class="feat-row"><span class="feat-name">Email digests</span><span class="feat-what">Formatted HTML + Markdown + Slack-ready output, one click each</span></div>
+      <div class="feat-row"><span class="feat-name">Team email send</span><span class="feat-what">Send the digest straight to your team via Resend (free tier works)</span></div>
+      <div class="feat-row"><span class="feat-name">Monday scheduler</span><span class="feat-what"><code>startScheduler()</code> sends the risk list every Monday at 8:00 AM automatically</span></div>
+      <div class="feat-group">License</div>
+      <div class="feat-row"><span class="feat-name">MIT, open source</span><span class="feat-what">Fork it, host it, modify it, run it at work. No account, no trial, no card, no upgrade screens — ever</span></div>
     </div>
   </section>
 
