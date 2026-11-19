@@ -47,21 +47,45 @@ interface WebPayload {
 // Duplicate account ids (re-exported sheets, merged files) collapse to the
 // LAST row — otherwise the same account shows up as multiple risk cards
 // with doubled scores.
-function loadAccounts(rows: Record<string, string>[]): Account[] {
+function loadAccounts(rows: Record<string, string>[], warn: (m: string) => void): Account[] {
   const byId = new Map<string, Account>();
+  let dupes = 0, noId = 0, badDates = 0;
   for (const r of rows) {
     const a: Account = {
       id: r.id || r.account_id || r.account || "", name: r.name || r.id || r.account_id || "(unnamed)",
       mrr: num(r.mrr), renewalOn: r.renewal_on || r.renewal_date || "9999-12-31",
       lastContactOn: r.last_contact_on || r.last_contact || "1970-01-01",
     };
-    if (a.id) byId.set(a.id, a);
+    if (!a.id) { noId++; continue; }
+    if (byId.has(a.id)) { dupes++; byId.set(a.id, a); continue; }
+    if (!isUsableDate(a.renewalOn) || !isUsableDate(a.lastContactOn)) badDates++;
+    byId.set(a.id, a);
   }
+  if (noId) warn(`${noId} account row${noId === 1 ? "" : "s"} missing an id column — skipped`);
+  if (dupes) warn(`${dupes} duplicate account id${dupes === 1 ? "" : "s"} — kept the last row for each`);
+  if (badDates) warn(`${badDates} account${badDates === 1 ? " has" : "s have"} unparseable renewal/last-contact dates — renewal rules can't fire for those`);
   return [...byId.values()];
 }
 
+// Parse-warning surface — bad data (unparseable dates, orphan rows, dropped
+// ids) used to be handled silently, which hides real problems from the user.
+// Everything questionable is collected here and shown in the UI.
+function makeWarnings() {
+  const w: string[] = [];
+  const seen = new Set<string>();
+  const add = (msg: string) => { if (!seen.has(msg)) { seen.add(msg); w.push(msg); } };
+  return { w, add };
+}
+
+// A date that can't be parsed (and isn't an intentional sentinel like
+// "9999-12-31") — keep the sentinel list tight and explicit.
+const SENTINEL_DATES = new Set(["9999-12-31", "1970-01-01"]);
+const isUsableDate = (s: string | undefined) =>
+  !!s && (SENTINEL_DATES.has(s) || !isNaN(Date.parse(s)));
+
 function analyze(payload: WebPayload) {
   const files = payload.files || {};
+  const { w: warnings, add: warn } = makeWarnings();
   const cfg: RuleConfig = { ...DEFAULT_CONFIG, ...(payload.config || {}) };
   // coerce/validate thresholds — a NaN from bad input would silently
   // disable rules, so every numeric falls back to its default
@@ -82,30 +106,49 @@ function analyze(payload: WebPayload) {
     }
     return [];
   };
-  const accounts = loadAccounts(find("accounts.csv"));
-  const usage: UsageEvent[] = find("usage.csv", "product_usage.csv").map((r) => ({
+  const accounts = loadAccounts(find("accounts.csv"), warn);
+  const ids = new Set(accounts.map((a) => a.id));
+
+  // Generic per-file scrubber: drops rows without an account id or an
+  // unparseable date, and counts orphan rows (id not present in accounts.csv).
+  function scrub<T>(rows: Record<string, string>[], label: string, build: (r: Record<string, string>) => T): T[] {
+    const out: T[] = [];
+    let noId = 0, badDate = 0, orphan = 0;
+    for (const r of rows) {
+      const id = r.account_id || r.account || "";
+      if (!id) { noId++; continue; }
+      if (!isUsableDate(r.date)) { badDate++; continue; }
+      if (!ids.has(id)) { orphan++; continue; }
+      out.push(build(r));
+    }
+    if (noId) warn(`${noId} ${label} row${noId === 1 ? "" : "s"} missing account_id — skipped`);
+    if (badDate) warn(`${badDate} ${label} row${badDate === 1 ? "" : "s"} ${badDate === 1 ? "has" : "have"} unparseable dates — skipped`);
+    if (orphan) warn(`${orphan} ${label} row${orphan === 1 ? "" : "s"} reference an account not in accounts.csv — skipped`);
+    return out;
+  }
+
+  const usage = scrub<UsageEvent>(find("usage.csv", "product_usage.csv"), "usage", (r) => ({
     accountId: r.account_id || r.account, date: r.date, metric: r.metric || r.event || "logins", value: num(r.value ?? r.count),
   }));
-  const tickets: Ticket[] = find("tickets.csv", "support_tickets.csv").map((r) => ({
+  const tickets = scrub<Ticket>(find("tickets.csv", "support_tickets.csv"), "tickets", (r) => ({
     accountId: r.account_id || r.account, date: r.date, subject: r.subject || "(untitled)",
     status: r.status === "resolved" || r.status === "closed" ? "resolved" : "open", ageDays: num(r.age_days ?? r.days_open),
   }));
-  const payments: Payment[] = find("payments.csv", "stripe_payments.csv").map((r) => ({
+  const payments = scrub<Payment>(find("payments.csv", "stripe_payments.csv"), "payments", (r) => ({
     accountId: r.account_id || r.account, date: r.date, status: r.status === "failed" ? "failed" : "succeeded",
     amountCents: num(r.amount_cents ?? Math.round(Number(r.amount || 0) * 100)),
   }));
-  const meetings: Meeting[] = find("meetings.csv", "calls.csv").map((r) => ({
+  const meetings = scrub<Meeting>(find("meetings.csv", "calls.csv"), "meetings", (r) => ({
     accountId: r.account_id || r.account, date: r.date,
     status: (["held", "cancelled", "no_show"].includes(r.status) ? r.status : "held") as Meeting["status"],
   }));
-  const champions = find("champions.csv", "champion_changes.csv").map((r) => ({
+  const champions = scrub(find("champions.csv", "champion_changes.csv"), "champion changes", (r) => ({
     accountId: r.account_id || r.account, date: r.date, note: r.note || "champion left",
   }));
-  const validAccounts = accounts.filter((a) => a.id);
   const items = buildRiskList(
-    { accounts: validAccounts, usage, tickets, payments, meetings, champions }, today, cfg,
+    { accounts, usage, tickets, payments, meetings, champions }, today, cfg,
   );
-  return { items, md: renderMarkdown(items), html: renderEmailHtml(items), config: cfg, today: today.toISOString().slice(0, 10) };
+  return { items, warnings, md: renderMarkdown(items), html: renderEmailHtml(items), config: cfg, today: today.toISOString().slice(0, 10) };
 }
 
 // Weekly Monday digest — opt-in via env, free for everyone:

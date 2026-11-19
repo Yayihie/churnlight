@@ -32,6 +32,9 @@
   button.go:disabled { background:#9ca3af; cursor:default; }
   .err { background:var(--red-bg); color:var(--red); padding:12px; border-radius:8px; margin-top:14px; font-size:14px; display:none; }
   #results { margin-top:32px; display:none; }
+  .warn { border:1px solid #f0d48a; background:#fff9ec; border-radius:10px; padding:12px 16px; margin-bottom:14px; font-size:13.5px; color:#6b5313; }
+  .warn ul { margin:6px 0 0 18px; padding:0; }
+  .warn li { margin-top:3px; }
   .summary { font-size:15px; color:var(--muted); margin-bottom:16px; }
   .card { border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:14px; }
   .card.critical { border-left:4px solid var(--red); }
@@ -121,6 +124,7 @@
   </div>
 
   <div id="results">
+    <div id="warnings" style="display:none"></div>
     <p class="summary" id="summary"></p>
     <div id="cards"></div>
     <div class="actions">
@@ -193,6 +197,12 @@ go.addEventListener('click', async () => {
 function render(d) {
   const box = document.getElementById('results');
   const cards = document.getElementById('cards');
+  // Parse warnings — bad data must be visible, never silently dropped.
+  const wbox = document.getElementById('warnings');
+  if (d.warnings && d.warnings.length) {
+    wbox.innerHTML = `<div class="warn"><strong>Heads up — some data couldn't be used:</strong><ul>${d.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
+    wbox.style.display = 'block';
+  } else { wbox.style.display = 'none'; wbox.innerHTML = ''; }
   document.getElementById('summary').textContent =
     d.items.length === 0
       ? 'Good news — nothing flagged this week.'
