@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Churnlight — run it in your browser</title>
+<style>
+  :root {
+    --ink:#111827; --muted:#6b7280; --faint:#9ca3af;
+    --accent:#2563eb; --accent-ink:#1d4ed8;
+    --red:#b91c1c; --red-bg:#fef2f2;
+    --amber:#92400e; --amber-bg:#fffbeb;
+    --green:#15803d;
+    --line:#e5e7eb; --line-soft:#f3f4f6;
+    --bg:#fafafa; --card:#ffffff;
+    --radius:12px; --radius-sm:8px;
+    --shadow:0 1px 2px rgba(17,24,39,.06), 0 1px 3px rgba(17,24,39,.08);
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:var(--bg);
+    max-width:780px; margin:0 auto; padding:0 20px 96px;
+    -webkit-font-smoothing:antialiased;
+  }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  code { background:var(--line-soft); border-radius:4px; padding:1px 5px; font-size:.92em; }
+
+  /* ---- header ---- */
+  .topbar { position:sticky; top:0; z-index:10; background:rgba(250,250,250,.94); border-bottom:1px solid var(--line);
+    margin:0 -20px; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; }
+  .brand { display:flex; align-items:center; gap:9px; font-weight:700; font-size:16px; letter-spacing:-.3px; }
+  .brand .dot { width:10px; height:10px; border-radius:3px; background:var(--accent); }
+  .topbar nav a { color:var(--muted); font-size:13.5px; text-decoration:none; }
+  .topbar nav a:hover { color:var(--ink); }
+  .topbar nav { display:flex; gap:18px; }
+
+  /* ---- intro ---- */
+  .hero { padding:36px 0 26px; }
+  h1 { font-size:27px; margin:0 0 6px; letter-spacing:-.6px; }
+  .tagline { color:var(--muted); margin:0 0 22px; font-size:15.5px; line-height:1.5; max-width:600px; }
+  .steps { display:flex; gap:0; border:1px solid var(--line); border-radius:var(--radius); background:var(--card); overflow:hidden; margin-bottom:22px; }
+  .step { flex:1; padding:12px 14px; font-size:13px; color:var(--muted); border-right:1px solid var(--line); display:flex; gap:10px; align-items:baseline; }
+  .step:last-child { border-right:0; }
+  .step b { color:var(--ink); font-size:13.5px; }
+  .step .n { font-size:11px; font-weight:700; color:var(--faint); }
+
+  /* ---- drop ---- */
+  .drop {
+    border:2px dashed #d1d5db; border-radius:var(--radius); padding:38px 24px; text-align:center;
+    color:var(--muted); font-size:15px; transition:border-color .12s, background .12s; cursor:pointer;
+    background:var(--card); box-shadow:var(--shadow);
+  }
+  .drop:hover { border-color:var(--accent); }
+  .drop.hover { border-color:var(--accent); background:#eff6ff; color:var(--accent-ink); }
+  .drop strong { color:var(--ink); }
+  .drop .sub { display:block; margin-top:8px; font-size:13px; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .chip { display:inline-flex; align-items:center; gap:7px; background:var(--card); border:1px solid var(--line);
+    border-radius:999px; padding:5px 8px 5px 12px; font-size:13px; box-shadow:var(--shadow); }
+  .chip .name { font-variant-numeric:tabular-nums; }
+  .chip .tick { color:var(--green); font-weight:700; }
+  .chip button { border:0; background:var(--line-soft); color:var(--muted); width:18px; height:18px; border-radius:50%;
+    font-size:11px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .chip button:hover { background:var(--red-bg); color:var(--red); }
+  .filelist-note { margin-top:10px; font-size:13px; color:var(--faint); }
+  .restore { margin-top:10px; font-size:13.5px; }
+  .restore a { color:var(--accent-ink); }
+
+  /* ---- rules ---- */
+  .settings { margin:20px 0 0; border:1px solid var(--line); border-radius:var(--radius); background:var(--card); box-shadow:var(--shadow); }
+  .settings > summary { cursor:pointer; padding:14px 18px; color:var(--ink); font-size:14.5px; font-weight:600; list-style:none; display:flex; align-items:center; justify-content:space-between; }
+  .settings > summary::-webkit-details-marker { display:none; }
+  .settings > summary .chev { color:var(--faint); font-size:12px; }
+  .settings[open] > summary .chev { transform:rotate(180deg); }
+  .settings .body { padding:4px 18px 18px; border-top:1px solid var(--line-soft); }
+  .settings .row { display:flex; align-items:center; gap:14px; margin:13px 0; font-size:14px; }
+  .settings label { min-width:250px; color:var(--ink); }
+  .settings input[type=range] { flex:1; accent-color:var(--accent); }
+  .settings .val { width:64px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; font-size:13px;
+    background:var(--line-soft); border-radius:6px; padding:3px 6px; }
+  .reset-rules { margin-top:4px; background:none; border:0; color:var(--muted); font-size:13px; cursor:pointer; text-decoration:underline; padding:2px; }
+  .reset-rules:hover { color:var(--ink); }
+
+  /* ---- CTA ---- */
+  button.go {
+    width:100%; padding:15px; font-size:16px; font-weight:600; color:#fff; background:var(--accent);
+    border:0; border-radius:10px; cursor:pointer; margin-top:20px; transition:background .12s;
+  }
+  button.go:hover:not(:disabled) { background:var(--accent-ink); }
+  button.go:disabled { background:#c7cdd6; cursor:not-allowed; }
+  button.go.loading { background:var(--accent-ink); }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff;
+    border-radius:50%; vertical-align:-2px; margin-right:8px; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .err { background:var(--red-bg); color:var(--red); padding:12px 14px; border:1px solid #fecaca; border-radius:var(--radius-sm);
+    margin-top:14px; font-size:14px; display:none; }
+
+  /* ---- results ---- */
+  #results { margin-top:36px; display:none; }
+  .warn { border:1px solid #f0d48a; background:#fff9ec; border-radius:var(--radius); padding:13px 16px; margin-bottom:16px; font-size:13.5px; color:#6b5313; }
+  .warn ul { margin:6px 0 0 18px; padding:0; }
+  .warn li { margin-top:3px; }
+  .summary { font-size:16px; font-weight:600; margin-bottom:16px; }
+  .summary .count-critical { color:var(--red); }
+  .summary .count-watch { color:var(--amber); }
+  .summary .quiet { color:var(--muted); font-weight:400; font-size:14px; }
+
+  .card { border:1px solid var(--line); border-radius:var(--radius); padding:18px; margin-bottom:14px; background:var(--card); box-shadow:var(--shadow); }
+  .card.critical { border-left:4px solid var(--red); }
+  .card.watch { border-left:4px solid #f59e0b; }
+  .card h3 { margin:0; font-size:16.5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .pill { font-size:11px; font-weight:700; padding:2px 9px; border-radius:5px; letter-spacing:.4px; }
+  .pill.critical { background:var(--red-bg); color:var(--red); }
+  .pill.watch { background:var(--amber-bg); color:var(--amber); }
+  .mrr { color:var(--muted); font-size:13px; margin-top:3px; font-variant-numeric:tabular-nums; }
+  .scorebar { height:4px; background:var(--line-soft); border-radius:2px; margin-top:12px; position:relative; overflow:hidden; }
+  .scorebar i { position:absolute; inset:0 auto 0 0; border-radius:2px; }
+  .card.critical .scorebar i { background:var(--red); }
+  .card.watch .scorebar i { background:#f59e0b; }
+  .sig { margin-top:12px; font-size:14px; line-height:1.5; padding-top:12px; border-top:1px solid var(--line-soft); }
+  .sig:first-of-type { border-top:0; }
+  .sig .lbl { display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--faint); margin-right:6px; }
+  .sig .math { color:var(--muted); font-size:12.5px; margin-top:3px; font-variant-numeric:tabular-nums; }
+  .sig .do { color:var(--accent-ink); margin-top:3px; }
+
+  .actions { display:flex; gap:10px; margin-top:24px; flex-wrap:wrap; }
+  .actions button { padding:10px 16px; font-size:14px; border-radius:var(--radius-sm); border:1px solid var(--line);
+    background:var(--card); cursor:pointer; font-weight:500; transition:border-color .12s; }
+  .actions button:hover { border-color:var(--faint); }
+  .actions button.primary { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .hint { color:var(--muted); font-size:13px; margin-top:12px; line-height:1.5; }
+
+  /* ---- integrations ---- */
+  .pro { margin-top:40px; border-top:1px solid var(--line); padding-top:30px; }
+  .pro-card { border:1px solid var(--line); border-radius:var(--radius); padding:22px; background:var(--card); box-shadow:var(--shadow); }
+  .pro-head { display:flex; justify-content:space-between; align-items:flex-start; }
+  .pro-card h3 { margin:0; font-size:18px; }
+  .pro-sub { color:var(--muted); font-size:14px; margin:2px 0 0; }
+  .pro-panel { margin:10px 0 0; border-top:1px solid var(--line-soft); }
+  .pro-panel:first-of-type { border-top:0; margin-top:14px; }
+  .pro-panel summary { cursor:pointer; font-size:14px; color:var(--accent-ink); font-weight:500; padding:8px 0; list-style:none; }
+  .pro-panel summary::-webkit-details-marker { display:none; }
+  .pro-panel summary::before { content:"＋ "; color:var(--faint); }
+  .pro-panel[open] summary::before { content:"－ "; }
+  .panel-body { padding:4px 0 8px; }
+  input.txt, .pro-panel input { width:100%; padding:10px 12px; margin:5px 0; border:1px solid var(--line); border-radius:var(--radius-sm); font-size:14px; background:#fff; color:var(--ink); }
+  input.txt:focus { border-color:var(--accent); outline:0; }
+  .pro-btn { padding:10px 16px; font-size:14px; border-radius:var(--radius-sm); border:1px solid var(--line); background:var(--card); cursor:pointer; font-weight:500; }
+  .pro-btn:hover { border-color:var(--faint); }
+  .pro-note { display:block; color:var(--muted); font-size:12.5px; margin-top:8px; line-height:1.5; }
+  .pro-note.good { color:var(--green); }
+  .guide { font-size:14px; line-height:1.7; color:var(--ink); }
+
+  .empty { text-align:center; padding:44px 20px; color:var(--muted); font-size:15px; }
+  .empty .big { font-size:40px; margin-bottom:8px; }
+
+  @media (max-width:560px) {
+    .steps { flex-direction:column; }
+    .step { border-right:0; border-bottom:1px solid var(--line); }
+    .step:last-child { border-bottom:0; }
+    .settings label { min-width:0; flex-basis:100%; }
+    .settings .row { flex-wrap:wrap; }
+    .settings .val { width:auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior:auto; }
+    * { animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span>Churnlight</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="https://github.com/Yayihie/churnlight" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+
+  <div class="hero">
+    <h1>Who to save this week</h1>
+    <p class="tagline">No install, no account — the scanner runs right here in your tab. Drop in your exports. Get the list of at-risk customers — each with the reason, the exact math behind it, and what to do next.</p>
+    <div class="steps" aria-label="How it works">
+      <div class="step"><span class="n">1</span><span><b>Drop CSVs</b> — whatever exports you have</span></div>
+      <div class="step"><span class="n">2</span><span><b>Tune rules</b> — or leave the defaults</span></div>
+      <div class="step"><span class="n">3</span><span><b>Get the list</b> — email, Slack, share link</span></div>
+    </div>
+  </div>
+
+  <div class="drop" id="drop" role="button" tabindex="0" aria-label="Add CSV files">
+    <strong>Drag your CSV files here</strong> — or click to choose files
+    <span class="sub">accounts, payments, tickets, usage, meetings, champions, users — whatever you have. Missing files are fine.</span>
+    <input type="file" id="picker" multiple accept=".csv" style="display:none">
+  </div>
+  <div class="chips" id="chips"></div>
+  <div id="filenotes"></div>
+
+  <details class="settings" id="settings">
+    <summary>Adjust the rules (optional) <span class="chev">▾</span></summary>
+    <div class="body">
+      <div class="row"><label>Usage drop counts as a warning at</label><input type="range" id="usageDropPct" min="10" max="90" step="5" value="40"><span class="val" id="v-usageDropPct">40%</span></div>
+      <div class="row"><label>Warn about renewals starting</label><input type="range" id="renewalSoonDays" min="7" max="90" step="1" value="30"><span class="val" id="v-renewalSoonDays">30 days</span></div>
+      <div class="row"><label>…and only if no contact in the last</label><input type="range" id="renewalNoContactDays" min="3" max="60" step="1" value="14"><span class="val" id="v-renewalNoContactDays">14 days</span></div>
+      <div class="row"><label>An open ticket turns stale after</label><input type="range" id="ticketStaleDays" min="3" max="30" step="1" value="14"><span class="val" id="v-ticketStaleDays">14 days</span></div>
+      <div class="row"><label>Failed payments before flagging</label><input type="range" id="paymentFailures" min="1" max="5" step="1" value="2"><span class="val" id="v-paymentFailures">2</span></div>
+      <div class="row"><label>Cancelled meetings before flagging</label><input type="range" id="cancelledMeetings" min="1" max="6" step="1" value="2"><span class="val" id="v-cancelledMeetings">2</span></div>
+      <div class="row"><label>A user counts as inactive after</label><input type="range" id="inactiveUserDays" min="7" max="90" step="1" value="30"><span class="val" id="v-inactiveUserDays">30 days</span></div>
+      <button class="reset-rules" id="reset-rules" type="button">Reset to defaults</button>
+    </div>
+  </details>
+
+  <button class="go" id="go" disabled>Find my at-risk customers</button>
+  <div class="err" id="err"></div>
+
+  <div id="results">
+    <div id="warnings" style="display:none"></div>
+    <p class="summary" id="summary"></p>
+    <div id="cards"></div>
+    <div class="actions">
+      <button class="primary" id="dl-email">Download the Monday email (HTML)</button>
+      <button id="dl-md">Download as a checklist (Markdown)</button>
+      <button id="copy">Copy for pasting into Slack</button>
+    </div>
+    <p class="hint">This runs entirely in your browser — your data never leaves this tab. Downloads and Slack copy work here; CRM pulls and the Monday email need the local version (one command, on GitHub).</p>
+  </div>
+
+<script src="app.js"></script>
+<script>
+const files = {}; // name -> text
+const drop = document.getElementById('drop');
+const picker = document.getElementById('picker');
+const chips = document.getElementById('chips');
+const filenotes = document.getElementById('filenotes');
+const go = document.getElementById('go');
+const err = document.getElementById('err');
+const SLIDER_IDS = ['usageDropPct','renewalSoonDays','renewalNoContactDays','ticketStaleDays','paymentFailures','cancelledMeetings','inactiveUserDays'];
+const DEFAULTS = Object.fromEntries(SLIDER_IDS.map(id => [id, document.getElementById(id).value]));
+const unitFor = id => id === 'paymentFailures' || id === 'cancelledMeetings' ? '' : (id === 'usageDropPct' ? '%' : ' days');
+
+function refresh() {
+  const names = Object.keys(files);
+  chips.innerHTML = names.map(n =>
+    `<span class="chip"><span class="tick">✓</span><span class="name">${esc(n)}</span><button data-f="${esc(n)}" title="Remove ${esc(n)}" aria-label="Remove ${esc(n)}">✕</button></span>`).join('');
+  chips.querySelectorAll('button').forEach(b => b.onclick = () => { delete files[b.dataset.f]; refresh(); });
+  filenotes.innerHTML = names.length
+    ? `<div class="filelist-note">No ${['accounts.csv'].filter(x => !names.includes(x)).join(', ') || 'other'} files needed — add more any time.</div>`
+    : '';
+  go.disabled = names.length === 0;
+  if (names.length === 0) go.textContent = 'Find my at-risk customers';
+}
+function addFiles(list) {
+  const pending = [...list].filter(f => f.name.toLowerCase().endsWith('.csv'));
+  if (!pending.length) { showError('Only .csv files work here. If your export is .xlsx, open it and use File → Save As → CSV.'); return; }
+  const MAX = 2_000_000;
+  const tooBig = pending.filter(f => f.size > MAX);
+  const ok = pending.filter(f => f.size <= MAX);
+  if (tooBig.length)
+    showError(`${tooBig.map(f => f.name).join(', ')} ${tooBig.length === 1 ? 'is' : 'are'} over the 2MB per-file limit. Export fewer rows (filter your date range) and drop it again.`);
+  if (!ok.length) return;
+  let left = ok.length;
+  ok.forEach(f => {
+    const r = new FileReader();
+    r.onload = () => { files[f.name] = r.result; if (--left === 0) refresh(); };
+    r.readAsText(f);
+  });
+}
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('hover'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('hover'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('hover'); addFiles(e.dataTransfer.files); });
+drop.addEventListener('click', () => picker.click());
+drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); picker.click(); } });
+picker.addEventListener('change', e => { addFiles(e.target.files); picker.value = ''; });
+
+for (const id of SLIDER_IDS) {
+  document.getElementById(id).addEventListener('input', e => {
+    document.getElementById('v-' + id).textContent = e.target.value + unitFor(id);
+  });
+}
+document.getElementById('reset-rules').onclick = () => {
+  for (const [id, v] of Object.entries(DEFAULTS)) {
+    document.getElementById(id).value = v;
+    document.getElementById('v-' + id).textContent = v + unitFor(id);
+  }
+};
+
+function showError(msg) { err.textContent = msg; err.style.display = 'block'; }
+
+let last = null;
+go.addEventListener('click', async () => {
+  err.style.display = 'none';
+  go.disabled = true; go.classList.add('loading');
+  go.innerHTML = '<span class="spinner"></span>Checking your accounts…';
+  const config = {};
+  for (const id of SLIDER_IDS) config[id] = Number(document.getElementById(id).value);
+  try {
+    // same engine as the local server, running in this tab
+    await new Promise(r => setTimeout(r, 60)); // let the spinner paint
+    const d = Churnlight.run({ files, config });
+    last = d; render(d); saveSession();
+  } catch (e) { showError(String(e.message || e)); }
+  go.disabled = false; go.classList.remove('loading');
+  go.textContent = 'Find my at-risk customers';
+});
+
+function render(d) {
+  const box = document.getElementById('results');
+  const cards = document.getElementById('cards');
+  const wbox = document.getElementById('warnings');
+  if (d.warnings && d.warnings.length) {
+    wbox.innerHTML = `<div class="warn"><strong>Heads up — some data couldn't be used:</strong><ul>${d.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
+    wbox.style.display = 'block';
+  } else { wbox.style.display = 'none'; wbox.innerHTML = ''; }
+  const hasWarns = d.warnings && d.warnings.length > 0;
+  const nCrit = d.items.filter(i => i.tier === 'critical').length;
+  const summary = document.getElementById('summary');
+  if (d.items.length === 0) {
+    summary.innerHTML = hasWarns
+      ? 'Nothing could be flagged — see the warning above.'
+      : 'Good news — nothing flagged this week. <span class="quiet">Everyone looks healthy by the rules you set.</span>';
+  } else {
+    summary.innerHTML =
+      `${d.items.length} account${d.items.length>1?'s':''} ${d.items.length>1?'need':'needs'} attention this week.` +
+      (nCrit ? ` <span class="count-critical">${nCrit} critical.</span> ` : ' ') +
+      `<span class="quiet">Sorted by risk score.</span>`;
+  }
+  cards.innerHTML = d.items.length === 0
+    ? (hasWarns
+        ? `<div class="empty"><div class="big">⚠️</div>Nothing could be flagged from this data. Fix the warning above and try again.</div>`
+        : `<div class="empty"><div class="big">🎉</div>Nothing flagged. Everyone looks healthy by the rules you set.</div>`)
+    : d.items.map(it => {
+        const max = Math.max(...d.items.map(x => x.riskScore), 1);
+        const sigs = it.signals.map(s =>
+          `<div class="sig"><div class="why"><span class="lbl">Why</span>${esc(s.reason)}</div>${s.math ? `<div class="math">${esc(s.math)}</div>` : ''}<div class="do"><span class="lbl">Do</span>${esc(s.action)}</div></div>`).join('');
+        return `<div class="card ${it.tier}">
+          <h3>${esc(it.account.name)} <span class="pill ${it.tier}">${it.tier === 'critical' ? 'CRITICAL' : 'WATCH'}</span></h3>
+          <div class="mrr">$${Number(it.account.mrr).toLocaleString()}/mo · renewal ${esc(it.account.renewalOn)}</div>
+          ${sigs}
+          <div class="scorebar" title="risk score ${it.riskScore}"><i style="width:${Math.round(100*it.riskScore/max)}%"></i></div>
+          <div class="mrr" style="margin-top:4px">risk score ${it.riskScore}</div>
+        </div>`;
+      }).join('');
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior:'smooth' });
+}
+const esc = s => String(s).replace(/&/g,'&' + 'amp;').replace(/</g,'&' + 'lt;').replace(/>/g,'&' + 'gt;');
+
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click();
+}
+document.getElementById('dl-email').onclick = () => last && download(`churnlight-${last.today}.html`, last.html, 'text/html');
+document.getElementById('dl-md').onclick = () => last && download(`churnlight-${last.today}.md`, last.md, 'text/markdown');
+document.getElementById('copy').onclick = async (e) => {
+  if (!last) return;
+  try { await navigator.clipboard.writeText(last.md); e.target.textContent = 'Copied ✓'; }
+  catch { showError('Clipboard blocked by the browser — use the Markdown download instead.'); return; }
+  setTimeout(() => e.target.textContent = 'Copy for pasting into Slack', 1500);
+};
+
+// pick up where you left off (local to this browser)
+const LS_KEY = 'churnlight-web-session';
+function saveSession() {
+  if (!last) return;
+  const config = {};
+  for (const id of SLIDER_IDS) config[id] = Number(document.getElementById(id).value);
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ files, config, when: new Date().toISOString().slice(0, 10) })); } catch {}
+}
+(function offerRestore() {
+  let s;
+  try { s = JSON.parse(localStorage.getItem(LS_KEY)); } catch { return; }
+  if (!s || !s.files || !Object.keys(s.files).length) return;
+  const div = document.createElement('div');
+  div.className = 'restore';
+  div.innerHTML = `<a href="#">Restore your last session</a> — ${Object.keys(s.files).length} file(s) from ${s.when}`;
+  filenotes.appendChild(div);
+  div.querySelector('a').onclick = (e) => {
+    e.preventDefault();
+    Object.assign(files, s.files);
+    for (const [k, v] of Object.entries(s.config || {})) {
+      const el = document.getElementById(k);
+      if (el) { el.value = v; document.getElementById('v-' + k).textContent = v + unitFor(k); }
+    }
+    div.remove();
+    refresh();
+  };
+})();
+</script>
+</body>
+</html>
