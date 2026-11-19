@@ -155,8 +155,16 @@ function refresh() {
 function addFiles(list) {
   const pending = [...list].filter(f => f.name.toLowerCase().endsWith('.csv'));
   if (!pending.length) { showError('Only .csv files work here. If your export is .xlsx, open it and use File → Save As → CSV.'); return; }
-  let left = pending.length;
-  pending.forEach(f => {
+  // Server rejects oversized bodies anyway — telling you here, before the
+  // upload, beats a cryptic dropped connection after.
+  const MAX = 2_000_000;
+  const tooBig = pending.filter(f => f.size > MAX);
+  const ok = pending.filter(f => f.size <= MAX);
+  if (tooBig.length)
+    showError(`${tooBig.map(f => f.name).join(', ')} ${tooBig.length === 1 ? 'is' : 'are'} over the 2MB per-file limit. Export fewer rows (filter your date range) and drop it again.`);
+  if (!ok.length) return;
+  let left = ok.length;
+  ok.forEach(f => {
     const r = new FileReader();
     r.onload = () => { files[f.name] = r.result; if (--left === 0) refresh(); };
     r.readAsText(f);

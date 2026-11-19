@@ -9,6 +9,7 @@ import { parseCsv } from "./csv.js";
 import { buildRiskList } from "./rules.js";
 import { renderMarkdown, renderEmailHtml } from "./digest.js";
 import { DEFAULT_CONFIG, Account, Meeting, Payment, Ticket, UsageEvent, RuleConfig } from "./types.js";
+import { normalizeDateFields } from "./dates.js";
 import { pullStripe, paymentsToCsv, sendEmail, startScheduler } from "./pro.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -106,7 +107,11 @@ function analyze(payload: WebPayload) {
     }
     return [];
   };
-  const accounts = loadAccounts(find("accounts.csv"), warn);
+  const accounts = loadAccounts(
+    normalizeDateFields(
+      find("accounts.csv"), ["renewal_on", "renewal_date", "last_contact_on", "last_contact"], "accounts.csv", warn,
+    ), warn,
+  );
   const ids = new Set(accounts.map((a) => a.id));
   // No accounts loaded = no risk list is possible. Saying "nothing flagged"
   // here would be a false all-clear.
@@ -133,22 +138,22 @@ function analyze(payload: WebPayload) {
     return out;
   }
 
-  const usage = scrub<UsageEvent>(find("usage.csv", "product_usage.csv"), "usage", (r) => ({
+  const usage = scrub<UsageEvent>(normalizeDateFields(find("usage.csv", "product_usage.csv"), ["date"], "usage.csv", warn), "usage", (r) => ({
     accountId: r.account_id || r.account, date: r.date, metric: r.metric || r.event || "logins", value: num(r.value ?? r.count),
   }));
-  const tickets = scrub<Ticket>(find("tickets.csv", "support_tickets.csv"), "tickets", (r) => ({
+  const tickets = scrub<Ticket>(normalizeDateFields(find("tickets.csv", "support_tickets.csv"), ["date"], "tickets.csv", warn), "tickets", (r) => ({
     accountId: r.account_id || r.account, date: r.date, subject: r.subject || "(untitled)",
     status: r.status === "resolved" || r.status === "closed" ? "resolved" : "open", ageDays: num(r.age_days ?? r.days_open),
   }));
-  const payments = scrub<Payment>(find("payments.csv", "stripe_payments.csv"), "payments", (r) => ({
+  const payments = scrub<Payment>(normalizeDateFields(find("payments.csv", "stripe_payments.csv"), ["date"], "payments.csv", warn), "payments", (r) => ({
     accountId: r.account_id || r.account, date: r.date, status: r.status === "failed" ? "failed" : "succeeded",
     amountCents: num(r.amount_cents ?? Math.round(Number(r.amount || 0) * 100)),
   }));
-  const meetings = scrub<Meeting>(find("meetings.csv", "calls.csv"), "meetings", (r) => ({
+  const meetings = scrub<Meeting>(normalizeDateFields(find("meetings.csv", "calls.csv"), ["date"], "meetings.csv", warn), "meetings", (r) => ({
     accountId: r.account_id || r.account, date: r.date,
     status: (["held", "cancelled", "no_show"].includes(r.status) ? r.status : "held") as Meeting["status"],
   }));
-  const champions = scrub(find("champions.csv", "champion_changes.csv"), "champion changes", (r) => ({
+  const champions = scrub(normalizeDateFields(find("champions.csv", "champion_changes.csv"), ["date"], "champion changes", warn), "champion changes", (r) => ({
     accountId: r.account_id || r.account, date: r.date, note: r.note || "champion left",
   }));
   const items = buildRiskList(
