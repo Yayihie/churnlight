@@ -9,7 +9,7 @@ import { parseCsv } from "./csv.js";
 import { buildRiskList } from "./rules.js";
 import { renderMarkdown, renderEmailHtml } from "./digest.js";
 import { DEFAULT_CONFIG, Account, Meeting, Payment, Ticket, UsageEvent, RuleConfig } from "./types.js";
-import { pullStripe, paymentsToCsv, sendEmail } from "./pro.js";
+import { pullStripe, paymentsToCsv, sendEmail, startScheduler } from "./pro.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8788);
@@ -82,6 +82,19 @@ function analyze(payload: WebPayload) {
   return { items, md: renderMarkdown(items), html: renderEmailHtml(items), config: cfg, today: today.toISOString().slice(0, 10) };
 }
 
+// Weekly Monday digest — opt-in via env, free for everyone:
+//   RESEND_API_KEY=<key> CHURNLIGHT_EMAIL_TO=team@you.com npm start
+// Uses the most recent analysis from this server session; skips the send
+// until at least one analysis has run.
+let lastDigest: { html: string; md: string; count: number } | null = null;
+if (process.env.RESEND_API_KEY && process.env.CHURNLIGHT_EMAIL_TO) {
+  startScheduler({
+    to: process.env.CHURNLIGHT_EMAIL_TO,
+    analyze: () => lastDigest || { html: "", md: "", count: 0 },
+  });
+  console.log(`[scheduler] weekly digest armed → ${process.env.CHURNLIGHT_EMAIL_TO} (Mondays 8:00 AM)`);
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || "/", `http://localhost:${PORT}`);
   if (req.method === "POST" && url.pathname === "/analyze") {
@@ -91,6 +104,7 @@ const server = http.createServer((req, res) => {
       try {
         const payload = JSON.parse(body) as WebPayload;
         const result = analyze(payload);
+        lastDigest = { html: result.html, md: result.md, count: result.items.length };
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(result));
       } catch (e) {

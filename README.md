@@ -65,8 +65,9 @@ Optional integrations (all free):
   payments pull in directly, no CSV exports
 - **Email delivery** — set `RESEND_API_KEY` and the app can send digests
   to your team
-- **Weekly scheduler** — `startScheduler()` in `src/pro.ts` sends the
-  digest every Monday at 8:00 AM
+- **Weekly scheduler** — set `RESEND_API_KEY` and `CHURNLIGHT_EMAIL_TO`
+  and the server emails the digest every Monday at 8:00 AM (uses the most
+  recent analysis from the running session)
 
 ## License
 
