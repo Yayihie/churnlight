@@ -69,6 +69,38 @@ Optional integrations (all free):
   and the server emails the digest every Monday at 8:00 AM (uses the most
   recent analysis from the running session)
 
+## API — connect your tools and bots
+
+The hosted app exposes a free, keyless JSON API (CORS: `*`), so external
+tools, scripts and bots can run the scanner without installing anything:
+
+```
+POST https://churnlight.vercel.app/api/analyze
+Content-Type: application/json
+
+{
+  "files": {
+    "accounts.csv": "id,name,mrr,renewal_on,last_contact_on\n...",
+    "users.csv": "account_id,name,last_active_on\n..."
+  },
+  "config": { "renewalSoonDays": 30, "inactiveUserDays": 30 }
+}
+```
+
+Returns `{ items, warnings, md, html, config, today }` — `items` is the risk
+list (account, tier, riskScore, signals with reason/math/action), `md` is
+Slack/Markdown-ready. Config keys are optional; anything you omit uses the
+defaults. Nothing is stored.
+
+Also available: `POST /api/hubspot` `{ token }`, `POST /api/salesforce`
+`{ username, password, securityToken, clientId, clientSecret }`, and
+`POST /api/stripe` `{ secretKey }` — each pulls live CRM/billing data and
+returns ready-to-scan CSVs. Credentials ride in the request only and are
+never persisted.
+
+The same endpoints exist on the local server (`http://localhost:8788`) if
+you'd rather keep data fully on your machine.
+
 ## License
 
 MIT
