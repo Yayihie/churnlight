@@ -50,32 +50,23 @@ in the app (the "Adjust the rules" panel) or via a JSON config — no code.
 
 ```bash
 npm install
-npm test        # 17 tests, vitest
+npm test        # tests, vitest
 npm run build   # tsc → dist/
 npm start       # build + web app on :8788
 ```
 
-## Free vs Pro (open-core)
+## Everything is free
 
-Churnlight is open source and free forever. The Pro features' code is in
-this repo too — they unlock with a signed license key
-(`CHURNLIGHT_LICENSE_KEY`, Ed25519-verified by `src/license.ts`):
+There is no paid tier. Stripe auto-connect, scheduled Monday emails, every
+rule and slider — all of it is in this repo, MIT licensed, for anyone.
 
-| | Free | Pro ($49/mo) |
-|---|---|---|
-| Web app, drag-and-drop CSVs | ✅ | ✅ |
-| All 6 risk rules + sliders | ✅ | ✅ |
-| Markdown + HTML digests | ✅ | ✅ |
-| **Stripe auto-connect** (pull payments, no CSV exports) | — | ✅ |
-| **Monday email on autopilot** (Resend, 8:00 AM weekly) | — | ✅ |
-| **Hosted** — nothing to install or keep running | — | ✅ |
-
-Buy a key at https://churnlight.dev — set up in two minutes:
-
-```bash
-export CHURNLIGHT_LICENSE_KEY=<your key>
-npm start
-```
+Optional integrations (all free):
+- **Stripe auto-connect** — paste a Stripe secret key in the web app and
+  payments pull in directly, no CSV exports
+- **Email delivery** — set `RESEND_API_KEY` and the app can send digests
+  to your team
+- **Weekly scheduler** — `startScheduler()` in `src/pro.ts` sends the
+  digest every Monday at 8:00 AM
 
 ## License
 

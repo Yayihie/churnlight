@@ -1,23 +1,10 @@
-// Pro features — open-core. The code is public; the features unlock with a
-// paid license key. Free users see exactly what they're missing, not a
-// crippled experience.
-import { getLicense, LicenseInfo } from "./license.js";
-
-export function requirePro(): LicenseInfo {
-  const lic = getLicense();
-  if (!lic.valid) throw new Error(`Pro feature — this requires a Churnlight Pro license (${lic.error || "free tier"}). Get one at https://churnlight.dev`);
-  return lic;
-}
-
-// ---- Stripe auto-connect ----
-// Pulls the last N charges and converts them to Churnlight's payments.csv
-// shape, so the whole engine works with zero manual export.
+// Integrations — Stripe auto-connect and email delivery. Free for everyone;
+// the code is public and nothing is gated.
 export interface StripePayment {
   accountId: string; date: string; status: string; amountCents: number;
 }
 
 export async function pullStripe(secretKey: string, limit = 200): Promise<StripePayment[]> {
-  requirePro();
   const res = await fetch(`https://api.stripe.com/v1/charges?limit=${limit}`, {
     headers: { Authorization: `Bearer ${secretKey}` },
   });
@@ -44,7 +31,6 @@ export function paymentsToCsv(payments: StripePayment[]): string {
 // Sends the digest via Resend (no SMTP server to configure). Returns the
 // provider id so callers can verify delivery.
 export async function sendEmail(to: string, subject: string, html: string): Promise<{ id: string }> {
-  requirePro();
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error("RESEND_API_KEY not set — get one at https://resend.com (free tier works)");
   const res = await fetch("https://api.resend.com/emails", {
@@ -66,7 +52,6 @@ export function startScheduler(opts: {
   to: string;
   analyze: () => { html: string; md: string; count: number };
 }): { stop: () => void } {
-  requirePro();
   let lastSentWeek = "";
   const timer = setInterval(async () => {
     const now = new Date();

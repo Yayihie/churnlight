@@ -9,8 +9,7 @@ import { parseCsv } from "./csv.js";
 import { buildRiskList } from "./rules.js";
 import { renderMarkdown, renderEmailHtml } from "./digest.js";
 import { DEFAULT_CONFIG, Account, Meeting, Payment, Ticket, UsageEvent, RuleConfig } from "./types.js";
-import { getLicense, LicenseInfo } from "./license.js";
-import { pullStripe, paymentsToCsv, sendEmail, requirePro } from "./pro.js";
+import { pullStripe, paymentsToCsv, sendEmail } from "./pro.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8788);
@@ -101,14 +100,8 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  // ---- Pro / license endpoints ----
-  if (req.method === "GET" && url.pathname === "/api/license") {
-    const lic: LicenseInfo = getLicense();
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ pro: lic.valid, customer: lic.customer, expires: lic.expires, error: lic.error }));
-    return;
-  }
-  if (req.method === "POST" && url.pathname === "/api/pro/stripe") {
+  // ---- integration endpoints (free for everyone) ----
+  if (req.method === "POST" && url.pathname === "/api/stripe") {
     readJson(req, res, async (body: any) => {
       const payments = await pullStripe(body.secretKey);
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -116,7 +109,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === "POST" && url.pathname === "/api/pro/email") {
+  if (req.method === "POST" && url.pathname === "/api/email") {
     readJson(req, res, async (body: any) => {
       const result = await sendEmail(body.to, body.subject, body.html);
       res.writeHead(200, { "Content-Type": "application/json" });

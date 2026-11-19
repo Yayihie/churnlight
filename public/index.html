@@ -95,22 +95,15 @@
   <button class="go" id="go" disabled>Find my at-risk customers</button>
   <div class="err" id="err"></div>
 
-  <div class="pro" id="pro">
+  <div class="pro" id="integrations">
     <div class="pro-card">
       <div class="pro-head">
         <div>
-          <h3>Churnlight Pro</h3>
-          <p class="pro-sub">For teams that don't want to think about it.</p>
+          <h3>Connect your tools</h3>
+          <p class="pro-sub">Optional — CSV files work too. Everything here is free.</p>
         </div>
-        <div class="pro-price">$49<span>/mo</span></div>
       </div>
-      <ul class="pro-list">
-        <li><strong>Stripe auto-connect</strong> — payments pull in automatically, no CSV exports ever again</li>
-        <li><strong>Monday email, on autopilot</strong> — the digest arrives 8:00 AM every Monday, no clicking</li>
-        <li><strong>Hosted for you</strong> — nothing to install, nothing to keep running</li>
-      </ul>
-      <div id="pro-status" class="pro-status"></div>
-      <div class="pro-actions" id="pro-actions" style="display:none">
+      <div class="pro-actions" style="display:block">
         <details class="pro-panel">
           <summary>Connect Stripe (paste your secret key)</summary>
           <input type="password" id="stripe-key" placeholder="sk_live_... or sk_test_..." style="width:100%;padding:10px;margin:8px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
@@ -123,10 +116,6 @@
           <button class="pro-btn" id="email-go">Send it</button>
           <span class="pro-note" id="email-note"></span>
         </details>
-      </div>
-      <div class="pro-cta" id="pro-cta">
-        <button class="pro-btn buy" onclick="window.open('https://churnlight.dev','_blank')">Get Pro — set up in 2 minutes</button>
-        <span class="pro-note">Free version stays free forever. Pro adds the automation, not the features you already have.</span>
       </div>
     </div>
   </div>
@@ -239,34 +228,14 @@ document.getElementById('copy').onclick = async () => {
   setTimeout(() => event.target.textContent = 'Copy for pasting into Slack', 1500);
 };
 
-// ---- Pro section ----
-async function loadLicense() {
-  try {
-    const r = await fetch('/api/license');
-    const d = await r.json();
-    const status = document.getElementById('pro-status');
-    const actions = document.getElementById('pro-actions');
-    const cta = document.getElementById('pro-cta');
-    if (d.pro) {
-      status.textContent = `Pro active — licensed to ${d.customer} (until ${d.expires})`;
-      status.className = 'pro-status active';
-      actions.style.display = 'block';
-      cta.style.display = 'none';
-    } else {
-      status.textContent = 'Free tier — running locally with CSV files. Upgrade for Stripe auto-connect and the Monday email on autopilot.';
-      status.className = 'pro-status';
-    }
-  } catch (e) { /* server offline — ignore */ }
-}
-loadLicense();
-
+// ---- integrations (free for everyone) ----
 document.getElementById('stripe-go').onclick = async () => {
   const note = document.getElementById('stripe-note');
   const key = document.getElementById('stripe-key').value.trim();
   if (!key) { note.textContent = 'Paste your Stripe secret key first (Settings → API keys).'; return; }
   note.textContent = 'Pulling your payments…';
   try {
-    const r = await fetch('/api/pro/stripe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secretKey: key }) });
+    const r = await fetch('/api/stripe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secretKey: key }) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'failed');
     files[d.filename] = d.csv;
@@ -282,7 +251,7 @@ document.getElementById('email-go').onclick = async () => {
   if (!to) { note.textContent = 'Enter your team email.'; return; }
   note.textContent = 'Sending…';
   try {
-    const r = await fetch('/api/pro/email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const r = await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ to, subject: `Churnlight — ${last.items.length} account(s) at risk this week`, html: last.html }) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'failed');
