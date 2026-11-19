@@ -46,6 +46,7 @@
   .mrr { color:var(--muted); font-size:13px; margin-top:2px; }
   .sig { margin-top:10px; font-size:14px; }
   .sig .why { }
+  .sig .math { color:var(--muted); font-size:12.5px; margin-top:3px; font-variant-numeric:tabular-nums; }
   .sig .do { color:#1d4ed8; margin-top:2px; }
   .score { color:var(--muted); font-size:12px; margin-top:10px; }
   .actions { display:flex; gap:10px; margin-top:24px; flex-wrap:wrap; }
@@ -117,7 +118,21 @@
           <summary>Email this digest to my team</summary>
           <input type="email" id="email-to" placeholder="team@yourcompany.com" style="width:100%;padding:10px;margin:8px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
           <button class="pro-btn" id="email-go">Send it</button>
+          <button class="pro-btn" id="digest-go" style="margin-left:6px">Email me every Monday</button>
           <span class="pro-note" id="email-note"></span>
+        </details>
+        <details class="pro-panel">
+          <summary>Get your data out of Salesforce / HubSpot (2 min)</summary>
+          <div style="font-size:14px;line-height:1.6;color:var(--ink)">
+            <strong>Salesforce:</strong> Reports tab → New Report → <em>Accounts</em> → add columns
+            <code>Account Name, Annual Revenue, Customer Success Date, Last Activity</code> → Run →
+            <em>Export</em> → CSV only → save as <code>accounts.csv</code>.<br>
+            Tickets: report on Cases (<code>Case Number, Account ID, Status, Created Date</code>) → <code>tickets.csv</code>.<br>
+            <strong>HubSpot:</strong> Reports → <em>Reports</em> → create a <em>Contacts/Companies</em> report →
+            Export → CSV. Map company name → <code>id</code>, MRR → <code>mrr</code>, renewal/next-bill date →
+            <code>renewal_on</code>, last activity → <code>last_contact_on</code>.<br>
+            Column names that don't match are fine — the banner above will tell you exactly what couldn't be used.
+          </div>
         </details>
       </div>
     </div>
@@ -223,7 +238,7 @@ function render(d) {
         : `<div class="empty"><div class="big">🎉</div>Nothing flagged. Everyone looks healthy by the rules you set.</div>`)
     : d.items.map(it => {
         const sigs = it.signals.map(s =>
-          `<div class="sig"><div class="why"><strong>Why:</strong> ${esc(s.reason)}</div><div class="do"><strong>Do:</strong> ${esc(s.action)}</div></div>`).join('');
+          `<div class="sig"><div class="why"><strong>Why:</strong> ${esc(s.reason)}</div>${s.math ? `<div class="math">${esc(s.math)}</div>` : ''}<div class="do"><strong>Do:</strong> ${esc(s.action)}</div></div>`).join('');
         return `<div class="card ${it.tier}">
           <h3>${esc(it.account.name)} <span class="pill ${it.tier}">${it.tier === 'critical' ? 'CRITICAL' : 'WATCH'}</span></h3>
           <div class="mrr">$${Number(it.account.mrr).toLocaleString()}/mo · renewal ${esc(it.account.renewalOn)}</div>
@@ -263,6 +278,19 @@ document.getElementById('stripe-go').onclick = async () => {
     files[d.filename] = d.csv;
     refresh();
     note.textContent = `✓ ${d.count} payments pulled and added — hit "Find my at-risk customers" again.`;
+  } catch (e) { note.textContent = '⚠ ' + e.message; }
+};
+
+document.getElementById('digest-go').onclick = async () => {
+  const note = document.getElementById('email-note');
+  const to = document.getElementById('email-to').value.trim();
+  if (!to) { note.textContent = 'Enter your team email first.'; return; }
+  note.textContent = 'Arming your Monday digest…';
+  try {
+    const r = await fetch('/api/digest/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'failed');
+    note.textContent = `✓ Armed — confirmation sent to ${d.to}. Digests land Mondays at 8:00 AM.`;
   } catch (e) { note.textContent = '⚠ ' + e.message; }
 };
 

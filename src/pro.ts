@@ -27,6 +27,12 @@ export function paymentsToCsv(payments: StripePayment[]): string {
   return rows.join("\n");
 }
 
+// Basic email sanity check for the subscribe endpoint — keeps typos out of
+// the scheduler; the real deliverability check is Resend accepting the send.
+export function isValidEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s) && s.length <= 254;
+}
+
 // ---- Scheduled Monday email ----
 // Sends the digest via Resend (no SMTP server to configure). Returns the
 // provider id so callers can verify delivery.

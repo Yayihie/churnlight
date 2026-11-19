@@ -10,7 +10,7 @@ import { buildRiskList } from "./rules.js";
 import { renderMarkdown, renderEmailHtml } from "./digest.js";
 import { DEFAULT_CONFIG, Account, Meeting, Payment, Ticket, UsageEvent, RuleConfig } from "./types.js";
 import { normalizeDateFields } from "./dates.js";
-import { pullStripe, paymentsToCsv, sendEmail, startScheduler } from "./pro.js";
+import { pullStripe, paymentsToCsv, sendEmail, startScheduler, isValidEmail } from "./pro.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8788);
@@ -162,17 +162,23 @@ function analyze(payload: WebPayload) {
   return { items, warnings, md: renderMarkdown(items), html: renderEmailHtml(items), config: cfg, today: today.toISOString().slice(0, 10) };
 }
 
-// Weekly Monday digest — opt-in via env, free for everyone:
-//   RESEND_API_KEY=<key> CHURNLIGHT_EMAIL_TO=team@you.com npm start
-// Uses the most recent analysis from this server session; skips the send
-// until at least one analysis has run.
+// Weekly Monday digest. Armed two ways, both free:
+//   1. env at boot:      RESEND_API_KEY=<key> CHURNLIGHT_EMAIL_TO=team@you.com npm start
+//   2. at runtime:       POST /api/digest/subscribe {"to":"team@you.com"} — the UI's
+//                        "Email me every Monday" button. Sends a confirmation
+//                        immediately so a typo'd address fails loudly, not silently.
 let lastDigest: { html: string; md: string; count: number } | null = null;
-if (process.env.RESEND_API_KEY && process.env.CHURNLIGHT_EMAIL_TO) {
-  startScheduler({
-    to: process.env.CHURNLIGHT_EMAIL_TO,
+let digestSub: { stop: () => void } | null = null;
+function armDigest(to: string) {
+  digestSub?.stop();
+  digestSub = startScheduler({
+    to,
     analyze: () => lastDigest || { html: "", md: "", count: 0 },
   });
-  console.log(`[scheduler] weekly digest armed → ${process.env.CHURNLIGHT_EMAIL_TO} (Mondays 8:00 AM)`);
+  console.log(`[scheduler] weekly digest armed → ${to} (Mondays 8:00 AM)`);
+}
+if (process.env.RESEND_API_KEY && process.env.CHURNLIGHT_EMAIL_TO) {
+  armDigest(process.env.CHURNLIGHT_EMAIL_TO);
 }
 
 const server = http.createServer((req, res) => {
@@ -195,6 +201,27 @@ const server = http.createServer((req, res) => {
     return;
   }
   // ---- integration endpoints (free for everyone) ----
+  if (req.method === "POST" && url.pathname === "/api/digest/subscribe") {
+    readJson(req, res, async (body: any) => {
+      const to = String(body.to || "").trim();
+      if (!isValidEmail(to)) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "That doesn't look like an email address — check it and try again." }));
+        return;
+      }
+      if (!process.env.RESEND_API_KEY) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Email sending needs a RESEND_API_KEY env var on the server. Get a free one at resend.com, then: RESEND_API_KEY=<key> npm start" }));
+        return;
+      }
+      // Confirmation send first — a bad address fails HERE, not next Monday.
+      await sendEmail(to, "Churnlight digest armed", renderEmailHtml([], "You're set — Churnlight will email this list every Monday at 8:00 AM"));
+      armDigest(to);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ armed: true, to }));
+    });
+    return;
+  }
   if (req.method === "POST" && url.pathname === "/api/stripe") {
     readJson(req, res, async (body: any) => {
       const payments = await pullStripe(body.secretKey);

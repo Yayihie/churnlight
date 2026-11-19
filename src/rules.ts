@@ -31,6 +31,7 @@ export function evaluate(
       reason: `Champion left (${c.note}) — decisions stall without an internal advocate`,
       action: "Find and build a relationship with the new decision-maker this week",
       weight: W.champion_gone,
+      math: `champion_gone fired · weight ${W.champion_gone}`,
     });
   }
 
@@ -56,6 +57,7 @@ export function evaluate(
             reason: `${metric} usage down ${drop}% vs the prior ${cfg.usageWindowDays} days`,
             action: "Check whether the core value event is still happening; call if not",
             weight: W.usage_drop,
+            math: `down ${drop}% ≥ threshold ${cfg.usageDropPct}% · weight ${W.usage_drop}`,
           });
           break; // one usage signal per account is enough
         }
@@ -73,6 +75,7 @@ export function evaluate(
         reason: `Renewal in ${until} days and no CSM contact for ${since} days`,
         action: "Book a value-review call before the renewal hits procurement",
         weight: W.renewal_no_contact,
+        math: `renewal in ${until}d ≤ ${cfg.renewalSoonDays}d and no contact ${since}d ≥ ${cfg.renewalNoContactDays}d · weight ${W.renewal_no_contact}`,
       });
     }
   }
@@ -85,6 +88,7 @@ export function evaluate(
         reason: `Ticket "${t.subject}" unresolved for ${t.ageDays} days`,
         action: "Get the ticket to done or give the customer a dated fix commitment",
         weight: W.stale_ticket,
+        math: `open ${t.ageDays}d ≥ ${cfg.ticketStaleDays}d · weight ${W.stale_ticket}`,
       });
     }
   }
@@ -99,6 +103,7 @@ export function evaluate(
         reason: `${fails.length} failed payments (last $${amt.toFixed(2)})`,
         action: "Fix the card on file today — this churn is fully recoverable",
         weight: W.failed_payments,
+        math: `${fails.length} failures ≥ ${cfg.paymentFailures} · weight ${W.failed_payments}`,
       });
     }
   }
@@ -114,6 +119,7 @@ export function evaluate(
         reason: `${cancels.length} cancelled/no-show meetings in the last 60 days`,
         action: "Reschedule directly; if they cancel again, ask the champion's manager for a 15-min check-in",
         weight: W.meeting_no_show,
+        math: `${cancels.length} cancels ≥ ${cfg.cancelledMeetings} in 60d · weight ${W.meeting_no_show}`,
       });
     }
   }

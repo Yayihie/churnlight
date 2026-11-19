@@ -44,6 +44,7 @@ export interface Signal {
   reason: string;         // plain words a CSM would say
   action: string;         // concrete next step
   weight: number;         // 0-10, contributes to risk sum
+  math?: string;          // exact comparison that fired — no black box
 }
 
 export interface RiskItem {

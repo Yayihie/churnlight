@@ -10,7 +10,7 @@ export function renderMarkdown(items: RiskItem[]): string {
   for (const it of items) {
     out += `\n## ${TIER_LABEL[it.tier]} ${it.account.name} — $${it.account.mrr.toLocaleString()}/mo MRR\n`;
     for (const s of it.signals) {
-      out += `- **Why:** ${s.reason}\n  **Do:** ${s.action}\n`;
+      out += `- **Why:** ${s.reason}${s.math ? ` _(${s.math})_` : ""}\n  **Do:** ${s.action}\n`;
     }
     out += `  _risk score: ${it.riskScore}_\n`;
   }
@@ -32,7 +32,7 @@ export function renderEmailHtml(items: RiskItem[], title = "Churnlight — Weekl
         </div>
         <div style="color:#666;font-size:13px">$${it.account.mrr.toLocaleString()}/mo · renewal ${esc(it.account.renewalOn)}</div>
         ${it.signals
-          .map((s) => `<div style="margin-top:6px;font-size:14px"><strong>Why:</strong> ${esc(s.reason)}<br/><strong>Do:</strong> ${esc(s.action)}</div>`)
+          .map((s) => `<div style="margin-top:6px;font-size:14px"><strong>Why:</strong> ${esc(s.reason)}${s.math ? ` <span style="color:#999;font-size:12px">(${esc(s.math)})</span>` : ""}<br/><strong>Do:</strong> ${esc(s.action)}</div>`)
           .join("")}
       </td>
     </tr>`
