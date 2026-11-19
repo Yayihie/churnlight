@@ -115,10 +115,9 @@
           <span class="pro-note" id="stripe-note"></span>
         </details>
         <details class="pro-panel">
-          <summary>Email this digest to my team</summary>
+          <summary>Get this in your inbox every Monday</summary>
           <input type="email" id="email-to" placeholder="team@yourcompany.com" style="width:100%;padding:10px;margin:8px 0;border:1px solid var(--line);border-radius:8px;font-size:14px">
-          <button class="pro-btn" id="email-go">Send it</button>
-          <button class="pro-btn" id="digest-go" style="margin-left:6px">Email me every Monday</button>
+          <button class="pro-btn" id="digest-go">Put me on the Monday list</button>
           <span class="pro-note" id="email-note"></span>
         </details>
         <details class="pro-panel">
@@ -284,28 +283,15 @@ document.getElementById('stripe-go').onclick = async () => {
 document.getElementById('digest-go').onclick = async () => {
   const note = document.getElementById('email-note');
   const to = document.getElementById('email-to').value.trim();
-  if (!to) { note.textContent = 'Enter your team email first.'; return; }
-  note.textContent = 'Arming your Monday digest…';
+  if (!to) { note.textContent = 'Enter your email first.'; return; }
+  note.textContent = 'Adding you to the Monday list…';
   try {
     const r = await fetch('/api/digest/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to }) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'failed');
-    note.textContent = `✓ Armed — confirmation sent to ${d.to}. Digests land Mondays at 8:00 AM.`;
-  } catch (e) { note.textContent = '⚠ ' + e.message; }
-};
-
-document.getElementById('email-go').onclick = async () => {
-  const note = document.getElementById('email-note');
-  const to = document.getElementById('email-to').value.trim();
-  if (!last) { note.textContent = 'Run the analysis first, then send.'; return; }
-  if (!to) { note.textContent = 'Enter your team email.'; return; }
-  note.textContent = 'Sending…';
-  try {
-    const r = await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject: `Churnlight — ${last.items.length} account(s) at risk this week`, html: last.html }) });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'failed');
-    note.textContent = '✓ Sent — check your inbox.';
+    note.textContent = d.emailed
+      ? `✓ ${d.to} is on the Monday list — confirmation sent, digests land Mondays at 8:00 AM.`
+      : `✓ ${d.to} is on the Monday list — digests are ready each Monday at 8:00 AM.`;
   } catch (e) { note.textContent = '⚠ ' + e.message; }
 };
 </script>

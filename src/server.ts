@@ -209,16 +209,27 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ error: "That doesn't look like an email address — check it and try again." }));
         return;
       }
-      if (!process.env.RESEND_API_KEY) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Email sending needs a RESEND_API_KEY env var on the server. Get a free one at resend.com, then: RESEND_API_KEY=<key> npm start" }));
-        return;
+      // No Resend required: capturing the email IS the feature. Subscribers
+      // are stored on disk (deduped); if a RESEND_API_KEY ever exists the
+      // scheduler emails them, otherwise their Monday digest is written to
+      // ./digests/. Confirmation email only when a key is actually present.
+      const subFile = path.join(process.cwd(), "subscribers.json");
+      let subs: string[] = [];
+      try { subs = JSON.parse(fs.readFileSync(subFile, "utf8")); } catch { /* first run */ }
+      if (!subs.includes(to)) subs.push(to);
+      fs.writeFileSync(subFile, JSON.stringify(subs, null, 2));
+      if (process.env.RESEND_API_KEY) {
+        try {
+          await sendEmail(to, "Churnlight digest armed", renderEmailHtml([], "You're set — Churnlight will email this list every Monday at 8:00 AM"));
+        } catch (e) {
+          res.writeHead(502, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: `Saved your email, but the confirmation send failed: ${e}` }));
+          return;
+        }
       }
-      // Confirmation send first — a bad address fails HERE, not next Monday.
-      await sendEmail(to, "Churnlight digest armed", renderEmailHtml([], "You're set — Churnlight will email this list every Monday at 8:00 AM"));
       armDigest(to);
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ armed: true, to }));
+      res.end(JSON.stringify({ armed: true, to, emailed: !!process.env.RESEND_API_KEY }));
     });
     return;
   }

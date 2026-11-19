@@ -52,8 +52,10 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
 }
 
 // ---- Weekly scheduler ----
-// In-process: when the hosted server runs, it checks every 5 minutes and
-// sends the digest Monday 8:00 AM local time, once per week.
+// In-process: checks every 5 minutes and handles the digest Monday 8:00 AM
+// local time, once per week. If a RESEND_API_KEY is present the digest is
+// emailed; without one it's written to ./digests/ so the Monday list still
+// exists — the subscriber's email is captured either way.
 export function startScheduler(opts: {
   to: string;
   analyze: () => { html: string; md: string; count: number };
@@ -67,11 +69,25 @@ export function startScheduler(opts: {
     lastSentWeek = week;
     try {
       const digest = opts.analyze();
-      await sendEmail(opts.to, `Churnlight — ${digest.count} account(s) at risk this week`, digest.html);
-      console.log(`[scheduler] Monday digest sent to ${opts.to} (${digest.count} flagged)`);
+      if (process.env.RESEND_API_KEY) {
+        await sendEmail(opts.to, `Churnlight — ${digest.count} account(s) at risk this week`, digest.html);
+        console.log(`[scheduler] Monday digest sent to ${opts.to} (${digest.count} flagged)`);
+      } else {
+        const dir = "./digests";
+        if (!fsExists(dir)) fsMkdir(dir);
+        fsWrite(`${dir}/${week}.html`, digest.html);
+        fsWrite(`${dir}/${week}.md`, digest.md);
+        console.log(`[scheduler] no RESEND_API_KEY — Monday digest for ${opts.to} written to ${dir}/${week}.html`);
+      }
     } catch (e) {
-      console.error("[scheduler] send failed:", e);
+      console.error("[scheduler] digest failed:", e);
     }
   }, 5 * 60 * 1000);
   return { stop: () => clearInterval(timer) };
 }
+
+// node:fs shims (kept here so this module stays the only fs user)
+import * as fsMod from "node:fs";
+const fsExists = (p: string) => fsMod.existsSync(p);
+const fsMkdir = (p: string) => fsMod.mkdirSync(p);
+const fsWrite = (p: string, s: string) => fsMod.writeFileSync(p, s);
